@@ -1,16 +1,19 @@
-# SupportPilot
+﻿# SupportPilot
 
 AI-assisted customer support workspace for organizing tickets, finding relevant support knowledge, and preparing reply drafts for human review.
 
+## Current milestone
+
+The first milestone is a responsive demo inbox with seeded tickets. It supports ticket search, status filters, ticket selection, assignment and status changes, conversation history, and local demo replies or internal notes. Changes stay in browser state and are not saved or sent to customers.
+
 ## Planned features
 
-- Shared ticket inbox with status, priority, category, and assignment
-- Ticket conversation history and team activity log
-- Knowledge articles and retrieval-augmented AI reply drafts with visible sources
-- AI triage suggestions and a human approval workflow
+- Team workspaces, authentication, and roles
+- Knowledge articles and retrieval-augmented reply drafts with visible sources
+- AI ticket classification and a human approval workflow
 - Basic support team metrics
 
-The first version will use a seeded demo workspace. Live inbox connections, sending customer replies, and a customer-facing chatbot are outside the initial scope.
+The demo begins with sample data. Live inbox connections and sending customer replies are outside the initial scope.
 
 ## Development
 
@@ -20,7 +23,3 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the app.
-
-## Project status
-
-The repository currently contains the Next.js starter scaffold. Product screens and backend features will be added in milestones.
