@@ -21,6 +21,8 @@ export default function Home() {
   const [databaseMode, setDatabaseMode] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [drafting, setDrafting] = useState(false);
+  const [triaging, setTriaging] = useState(false);
+  const [triageNotice, setTriageNotice] = useState("");
   const [draftSources, setDraftSources] = useState<DraftSource[]>([]);
   useEffect(() => {
     let current = true;
@@ -88,6 +90,20 @@ export default function Home() {
       setDrafting(false);
     }
   }
+  async function generateTriage() {
+    if (!active || triaging) return;
+    setTriaging(true);
+    setSaveError("");
+    setTriageNotice("");
+    try {
+      const response = await fetch(`/api/tickets/${encodeURIComponent(active.id)}/triage`, { method: "POST" });
+      const result = await response.json() as { triage?: { id: string }; error?: string };
+      if (!response.ok || !result.triage) throw new Error(result.error ?? "Could not analyze this ticket.");
+      setTriageNotice("AI triage is ready for " + active.id + ". ");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not analyze this ticket.");
+    } finally { setTriaging(false); }
+  }
   async function addMessage() {
     const body = note.trim();
     if (!body || !active) return;
@@ -121,7 +137,7 @@ export default function Home() {
       <nav className="nav-list" aria-label="Workspace navigation">
         <Link className="nav-link active" href="/"><Icon>▤</Icon>Inbox <small>7</small></Link>
         <Link className="nav-link" href="/drafts"><Icon>âœ§</Icon>AI drafts</Link>
-        <Link className="nav-link" href="/knowledge"><Icon>▣</Icon>Knowledge base</Link>
+        <Link className="nav-link" href="/triage"><Icon>AI</Icon>AI triage</Link><Link className="nav-link" href="/knowledge"><Icon>▣</Icon>Knowledge base</Link>
         <button className="nav-link"><Icon>▥</Icon>Reporting</button>
       </nav>
       <p className="nav-label views-label">YOUR VIEWS <span>＋</span></p>
@@ -137,7 +153,7 @@ export default function Home() {
       <header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>Inbox</strong></div><div className="top-actions"><label className="search"><Icon>⌕</Icon><input aria-label="Search tickets" placeholder="Search tickets..." value={query} onChange={event => setQuery(event.target.value)}/><kbd>⌘ K</kbd></label><button className="top-icon" aria-label="Notifications">♧<i/></button><button className="help">?</button></div></header>
       <div className="content">
         <div className="page-heading"><div><div className="eyebrow"><i/> FRIDAY, OCTOBER 23, 2026</div><h1>Good morning, Naol <span>✳</span></h1><p>Here’s what’s happening with your support inbox today.</p></div><button className="date-button">◷ &nbsp;Last 7 days &nbsp;⌄</button></div>
-        {saveError && <p className="save-error" role="alert">{saveError}</p>}
+        {saveError && <p className="save-error" role="alert">{saveError}</p>}{triageNotice && <p className="save-success" role="status">{triageNotice}<Link href="/triage">Review suggestion</Link></p>}
         <section className="metrics" aria-label="Inbox overview">
           <article className="metric"><div><span>Open tickets</span><b className="metric-icon green">▤</b></div><strong>{counts.Open + counts.Pending}<small className="good">↓ 12%</small></strong><p>vs. previous 7 days</p><div className="sparkline"><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
           <article className="metric"><div><span>Needs a reply</span><b className="metric-icon purple">◌</b></div><strong>{counts.Open}<small>in your queue</small></strong><p>2 tickets are unassigned</p><div className="progress"><i style={{width:"55%"}}/></div></article>
@@ -155,7 +171,7 @@ export default function Home() {
             <div className="list-footer">Showing {visible.length} of {tickets.length} tickets</div>
           </div>
 
-          {active ? <article className="detail-column"><div className="detail-top"><div className="ticket-id"><i/> {active.id} <span>·</span> {active.channel}</div><div className="detail-actions"><button className="more" aria-label="More ticket actions">···</button><button className="resolve" onClick={() => update(active.id, {status: active.status === "Resolved" ? "Open" : "Resolved"})}>✓ &nbsp;{active.status === "Resolved" ? "Reopen" : "Resolve"}</button></div></div>
+          {active ? <article className="detail-column"><div className="detail-top"><div className="ticket-id"><i/> {active.id} <span>·</span> {active.channel}</div><div className="detail-actions"><button className="ai-triage-button" onClick={generateTriage} disabled={triaging}>{triaging ? "Analyzing..." : "Analyze with AI"}</button><button className="more" aria-label="More ticket actions">···</button><button className="resolve" onClick={() => update(active.id, {status: active.status === "Resolved" ? "Open" : "Resolved"})}>✓ &nbsp;{active.status === "Resolved" ? "Reopen" : "Resolve"}</button></div></div>
             <div className="subject-block"><h2>{active.subject}</h2><div><span className={`priority ${active.priority.toLowerCase()}`}><i/>{active.priority} priority</span><i className="divider"/>Created today at 10:42 AM<i className="divider"/>Updated {active.time} ago</div></div>
             <div className="customer"><div><Avatar ticket={active}/><span><strong>{active.name}</strong><small>{active.email}</small></span></div><div><button aria-label="Email customer">✉</button><button aria-label="Customer details">♙</button></div></div>
             <div className="conversation" aria-label="Conversation history">{active.messages.map((message, index) => <div className={`message ${message.internal ? "internal" : ""}`} key={`${active.id}-${index}`}><span className={`message-avatar ${message.author === "You" ? "agent" : active.color}`}>{message.author === "You" ? "NU" : active.initials}</span><div><div className="message-meta"><strong>{message.author}</strong>{message.internal && <b>INTERNAL NOTE</b>}<span>{message.role}</span><time>{message.time}</time></div><p>{message.body}</p></div></div>)}</div>

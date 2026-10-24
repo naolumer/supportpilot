@@ -48,12 +48,28 @@ enum DraftStatus {
   REJECTED
 }
 
+enum TicketCategory {
+  BILLING
+  ACCOUNT_ACCESS
+  TECHNICAL_ISSUE
+  FEATURE_REQUEST
+  HOW_TO
+  OTHER
+}
+
+enum TicketSentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  FRUSTRATED
+}
+
 model Workspace {
-  id        String       @id @default(cuid())
+  id        String             @id @default(cuid())
   name      String
-  slug      String       @unique
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  slug      String             @unique
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
   members   Membership[]
   customers Customer[]
   tickets   Ticket[]
@@ -61,36 +77,37 @@ model Workspace {
 }
 
 model User {
-  id              String       @id @default(cuid())
-  name            String
-  email           String       @unique
-  createdAt       DateTime     @default(now())
-  memberships     Membership[]
-  assignedTickets Ticket[]     @relation("TicketAssignee")
+  id               String          @id @default(cuid())
+  name             String
+  email            String          @unique
+  createdAt        DateTime        @default(now())
+  memberships      Membership[]
+  assignedTickets  Ticket[]        @relation("TicketAssignee")
   authoredMessages TicketMessage[] @relation("MessageAuthor")
-  reviewedDrafts  AiDraft[]    @relation("DraftReviewer")
+  reviewedDrafts   AiDraft[]       @relation("DraftReviewer")
+  reviewedTriages  AiTriage[]      @relation("TriageReviewer")
 }
 
 model Membership {
-  id          String       @id @default(cuid())
+  id          String        @id @default(cuid())
   workspaceId String
   userId      String
   role        WorkspaceRole @default(AGENT)
-  createdAt   DateTime     @default(now())
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime      @default(now())
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, userId])
   @@index([userId])
 }
 
 model Customer {
-  id          String      @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   name        String
   email       String
-  createdAt   DateTime    @default(now())
-  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tickets     Ticket[]
 
   @@unique([workspaceId, email])
@@ -98,23 +115,24 @@ model Customer {
 }
 
 model Ticket {
-  id          String         @id @default(cuid())
+  id          String          @id @default(cuid())
   workspaceId String
   customerId  String
   assigneeId  String?
   reference   String
   subject     String
   preview     String
-  status      TicketStatus   @default(OPEN)
-  priority    TicketPriority @default(NORMAL)
-  channel     TicketChannel  @default(EMAIL)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  customer    Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  assignee    User?         @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  status      TicketStatus    @default(OPEN)
+  priority    TicketPriority  @default(NORMAL)
+  channel     TicketChannel   @default(EMAIL)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  assignee    User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   messages    TicketMessage[]
   drafts      AiDraft[]
+  triages     AiTriage[]
   auditEvents AuditEvent[]
 
   @@unique([workspaceId, reference])
@@ -147,7 +165,7 @@ model KnowledgeArticle {
   status      ArticleStatus @default(DRAFT)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId, slug])
   @@index([workspaceId, status, updatedAt])
@@ -160,7 +178,7 @@ model AiDraft {
   body         String      @db.Text
   model        String?
   status       DraftStatus @default(DRAFT)
-  sources       Json?
+  sources      Json?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   ticket       Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
@@ -169,15 +187,36 @@ model AiDraft {
   @@index([ticketId, createdAt])
 }
 
+model AiTriage {
+  id                String          @id @default(cuid())
+  ticketId          String
+  reviewedById      String?
+  category          TicketCategory
+  sentiment         TicketSentiment
+  suggestedPriority TicketPriority
+  confidence        Float
+  summary           String          @db.Text
+  recommendation    String          @db.Text
+  model             String?
+  status            DraftStatus     @default(DRAFT)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  ticket            Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  reviewedBy        User?           @relation("TriageReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([ticketId, createdAt])
+  @@index([status, createdAt])
+}
+
 model AuditEvent {
-  id          String   @id @default(cuid())
-  ticketId    String
-  actorName   String
-  action      String
-  fromValue   String?
-  toValue     String?
-  createdAt   DateTime @default(now())
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  ticketId  String
+  actorName String
+  action    String
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
   @@index([ticketId, createdAt])
 }
