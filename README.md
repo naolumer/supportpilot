@@ -4,13 +4,11 @@ AI-assisted customer support workspace for organizing tickets, finding relevant 
 
 ## Current milestone
 
-The app includes a responsive demo inbox, a searchable knowledge base, source-grounded AI reply drafts, an AI drafts review queue, and a human-reviewed ticket triage workflow. Agents can inspect article evidence, approve or reject reply drafts, and review Gemini category, sentiment, and priority suggestions before applying them. Approving a reply draft does not send it. Approving triage applies the suggested priority and records the decision. It supports ticket search, status filters, ticket selection, assignment and status changes, conversation history, and replies or internal notes. Without a database connection, inbox changes stay in browser state. With PostgreSQL configured, ticket updates, messages, reply drafts, triage suggestions, and review decisions are stored in the database.
+The app includes a responsive demo inbox, a searchable knowledge base, source-grounded AI reply drafts, an AI drafts review queue, a human-reviewed ticket triage workflow, and a live support reporting dashboard. Agents can inspect article evidence, approve or reject reply drafts, and review Gemini category, sentiment, and priority suggestions before applying them. Approving a reply draft does not send it. Approving triage applies the suggested priority and records the decision. Reporting summarizes ticket volume, queue health, response times, priority, approved AI categories, and assignee workload. It supports ticket search, status filters, ticket selection, assignment and status changes, conversation history, and replies or internal notes. Without a database connection, inbox changes stay in browser state. With PostgreSQL configured, ticket updates, messages, reply drafts, triage suggestions, and review decisions are stored in the database.
 
 ## Planned features
 
 - Team workspaces, authentication, and roles
-- AI ticket classification with suggested priority and routing
-- Basic support team metrics
 
 Live inbox connections and sending customer replies are outside the initial scope.
 

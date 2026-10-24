@@ -138,7 +138,7 @@ export default function Home() {
         <Link className="nav-link active" href="/"><Icon>▤</Icon>Inbox <small>7</small></Link>
         <Link className="nav-link" href="/drafts"><Icon>âœ§</Icon>AI drafts</Link>
         <Link className="nav-link" href="/triage"><Icon>AI</Icon>AI triage</Link><Link className="nav-link" href="/knowledge"><Icon>▣</Icon>Knowledge base</Link>
-        <button className="nav-link"><Icon>▥</Icon>Reporting</button>
+        <Link className="nav-link" href="/reporting"><Icon>▥</Icon>Reporting</Link>
       </nav>
       <p className="nav-label views-label">YOUR VIEWS <span>＋</span></p>
       <div className="view-link"><i className="green-dot"/>My open tickets <small>4</small></div>
