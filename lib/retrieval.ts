@@ -15,7 +15,7 @@ export type RetrievedSource = {
 };
 
 const stopWords = new Set([
-  "about", "after", "again", "also", "and", "are", "because", "been", "before", "being", "between", "could", "does", "from", "have", "into", "just", "more", "most", "other", "should", "some", "such", "than", "that", "their", "them", "then", "there", "these", "they", "this", "those", "through", "under", "until", "very", "was", "were", "what", "when", "where", "which", "while", "with", "would", "your",
+  "about", "after", "again", "also", "an", "and", "are", "as", "at", "be", "because", "been", "before", "being", "between", "but", "by", "can", "could", "did", "do", "does", "for", "from", "has", "have", "he", "her", "here", "him", "his", "how", "if", "in", "is", "it", "its", "just", "may", "me", "more", "most", "my", "no", "not", "of", "on", "or", "our", "out", "please", "request", "she", "should", "so", "some", "such", "support", "team", "than", "that", "the", "their", "them", "then", "there", "these", "they", "this", "those", "through", "to", "under", "until", "us", "very", "was", "we", "were", "what", "when", "where", "which", "while", "will", "with", "would", "you", "your",
 ]);
 
 function tokenize(value: string) {
@@ -60,10 +60,14 @@ export function retrieveSources(query: string, articles: ArticleForRetrieval[], 
     }
     const titleTerms = new Set(tokenize(chunk.article.title));
     const summaryTerms = new Set(tokenize(chunk.article.summary ?? ""));
-    score += queryTerms.filter((term) => titleTerms.has(term)).length * 2.5;
-    score += queryTerms.filter((term) => summaryTerms.has(term)).length * 1.2;
-    return { ...chunk, score };
-  }).filter((chunk) => chunk.score > 0).sort((left, right) => right.score - left.score);
+    const titleMatches = queryTerms.filter((term) => titleTerms.has(term)).length;
+    const summaryMatches = queryTerms.filter((term) => summaryTerms.has(term)).length;
+    const contentMatches = queryTerms.filter((term) => counts.has(term)).length;
+    score += titleMatches * 2.5;
+    score += summaryMatches * 1.2;
+    const relevant = titleMatches >= 2 || contentMatches >= 3 || (titleMatches >= 1 && contentMatches >= 2);
+    return { ...chunk, score, relevant };
+  }).filter((chunk) => chunk.score > 0 && chunk.relevant).sort((left, right) => right.score - left.score);
 
   const seenArticles = new Set<string>();
   return ranked.filter((chunk) => {
