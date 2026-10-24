@@ -1,5 +1,21 @@
 import { getPrisma } from "@/lib/prisma";
 
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const prisma = getPrisma();
+  if (!prisma) return Response.json({ error: "DATABASE_URL is not configured." }, { status: 503 });
+
+  const { id } = await params;
+  const workspace = await prisma.workspace.findUnique({ where: { slug: process.env.DEMO_WORKSPACE_SLUG ?? "northstar-studio" } });
+  if (!workspace) return Response.json({ error: "Workspace is not seeded. Run npm run db:seed." }, { status: 503 });
+
+  const draft = await prisma.aiDraft.findFirst({
+    where: { id, status: "APPROVED", ticket: { is: { workspaceId: workspace.id } } },
+    select: { id: true, body: true, sources: true, ticket: { select: { reference: true } } },
+  });
+  if (!draft) return Response.json({ error: "Approved draft not found." }, { status: 404 });
+  return Response.json({ draft });
+}
+
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const prisma = getPrisma();
   if (!prisma) return Response.json({ error: "DATABASE_URL is not configured." }, { status: 503 });

@@ -30,6 +30,7 @@ export default function DraftsPage() {
   const [busyId, setBusyId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [approvedHref, setApprovedHref] = useState("");
 
   useEffect(() => {
     let current = true;
@@ -49,14 +50,20 @@ export default function DraftsPage() {
     setBusyId(draft.id);
     setError("");
     setNotice("");
+    setApprovedHref("");
     try {
       const response = await fetch(`/api/drafts/${encodeURIComponent(draft.id)}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision }),
       });
-      const result = await response.json() as { error?: string };
+      const result = await response.json() as { error?: string; ticketReference?: string };
       if (!response.ok) throw new Error(result.error ?? "Could not update this draft.");
       setDrafts((rows) => rows.filter((row) => row.id !== draft.id));
-      setNotice(decision === "approve" ? `Draft for ${draft.ticket.reference} approved. It has not been sent.` : `Draft for ${draft.ticket.reference} rejected.`);
+      if (decision === "approve" && result.ticketReference) {
+        setApprovedHref(`/?ticket=${encodeURIComponent(result.ticketReference)}&approvedDraft=${encodeURIComponent(draft.id)}`);
+        setNotice(`Draft for ${draft.ticket.reference} approved and ready in the Inbox composer.`);
+      } else {
+        setNotice(`Draft for ${draft.ticket.reference} rejected and removed from the review queue.`);
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not update this draft.");
     } finally { setBusyId(""); }
@@ -74,7 +81,7 @@ export default function DraftsPage() {
     </header>
 
     {error && <p className="drafts-alert error" role="alert">{error}</p>}
-    {notice && <p className="drafts-alert success" role="status">{notice}</p>}
+    {notice && <p className="drafts-alert success" role="status">{notice} {approvedHref && <Link href={approvedHref}>Open in Inbox</Link>}</p>}
 
     {loading ? <div className="drafts-empty">Loading drafts…</div> : drafts.length === 0 ?
       <div className="drafts-empty"><strong>No drafts waiting for review</strong><span>Generate a reply from a ticket using Draft with AI, then review it here.</span><Link href="/">Go to inbox</Link></div> :
@@ -93,7 +100,7 @@ export default function DraftsPage() {
             </div>
             <div className="draft-reply-body"><strong>Draft response</strong><p>{draft.body}</p></div>
             {sources.length > 0 && <details className="draft-evidence"><summary>Knowledge evidence <span>{sources.length} {sources.length === 1 ? "article" : "articles"}</span></summary><div>{sources.map((source) => <a key={source.articleId} href="/knowledge"><strong>{source.title}</strong><span>{source.excerpt}</span></a>)}</div></details>}
-            <footer className="draft-review-actions"><span>Approval does not send the reply.</span><div><button className="draft-reject" disabled={busyId === draft.id} onClick={() => void review(draft, "reject")}>{busyId === draft.id ? "Saving…" : "Reject"}</button><button className="draft-approve" disabled={busyId === draft.id} onClick={() => void review(draft, "approve")}>{busyId === draft.id ? "Saving…" : "Approve draft"}</button></div></footer>
+            <footer className="draft-review-actions"><span>Approval loads this reply into the Inbox composer for you to send.</span><div><button className="draft-reject" disabled={busyId === draft.id} onClick={() => void review(draft, "reject")}>{busyId === draft.id ? "Saving…" : "Reject"}</button><button className="draft-approve" disabled={busyId === draft.id} onClick={() => void review(draft, "approve")}>{busyId === draft.id ? "Saving…" : "Approve & open in Inbox"}</button></div></footer>
           </article>;
         })}
       </section>

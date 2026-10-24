@@ -39,11 +39,32 @@ export default function Home() {
         if (!current || !result.tickets) return;
         setTickets(result.tickets);
         const requestedTicket = new URLSearchParams(window.location.search).get("ticket");
+        const approvedDraftId = new URLSearchParams(window.location.search).get("approvedDraft");
         const nextSelectedId = result.tickets.find(ticket => ticket.id === requestedTicket)?.id ?? result.tickets[0]?.id ?? "";
         selectedIdRef.current = nextSelectedId;
         setSelectedId(nextSelectedId);
         setDatabaseMode(result.mode === "database");
         setSaveError("");
+        if (approvedDraftId) {
+          void fetch(`/api/drafts/${encodeURIComponent(approvedDraftId)}`, { cache: "no-store" })
+            .then(async (response) => {
+              const payload = await response.json() as { draft?: { body: string; sources: unknown; ticket: { reference: string } }; error?: string };
+              if (!response.ok || !payload.draft) throw new Error(payload.error ?? "Could not load the approved reply.");
+              return payload.draft;
+            })
+            .then((draft) => {
+              if (!current) return;
+              if (draft.ticket.reference !== nextSelectedId) throw new Error("The approved reply belongs to a different ticket.");
+              setNote(draft.body);
+              setComposerMode("reply");
+              setDraftSources(Array.isArray(draft.sources) ? draft.sources as DraftSource[] : []);
+              setDraftDetected(true);
+              setDraftNotice(`Approved AI reply loaded for ${nextSelectedId}. Review it, then choose Add reply to save it to the ticket.`);
+            })
+            .catch((error: unknown) => {
+              if (current) setSaveError(error instanceof Error ? error.message : "Could not load the approved reply.");
+            });
+        }
       })
       .catch((error: unknown) => {
         if (current) {
