@@ -17,3 +17,114 @@
 @media(max-width:680px){.knowledge-content{padding:19px 12px 14px}.knowledge-heading{align-items:flex-start}.knowledge-heading h1{font-size:21px}.knowledge-heading p{max-width:240px;line-height:1.5}.knowledge-new{height:30px;padding:0 8px;font-size:8px}.knowledge-stats{padding:11px;gap:12px;justify-content:space-between}.knowledge-stats article{min-width:0}.knowledge-stats article strong{font-size:17px}.knowledge-stats>p{display:none}.knowledge-panel{display:flex;flex-direction:column}.knowledge-list{min-height:250px;max-height:360px;border-right:0;border-bottom:1px solid #e8ede8}.knowledge-items{overflow:auto}.knowledge-editor{padding:15px 12px}.knowledge-body-field textarea{min-height:180px}.knowledge-editor-foot{align-items:flex-end}.knowledge-editor-foot>span{max-width:150px;line-height:1.4}}
 
 .nav-link{text-decoration:none}
+/* Legibility pass: stronger type scale and contrast across the workspace */
+body{color:#26352b}
+.sidebar{color:#e6eee8}
+.brand{font-size:19px}
+.beta{font-size:10px}
+.workspace strong{font-size:13px;color:#f2f6f2}
+.workspace small{font-size:11px;color:#c1d0c4}
+.nav-label{font-size:11px;color:#b3c4b7;letter-spacing:1.25px}
+.nav-link{font-size:14px;color:#e4eee6}
+.nav-link small{font-size:12px;color:#d1e0d4}
+.nav-link .icon{font-size:16px}
+.view-link{font-size:13px;color:#e0eae2}
+.view-link small{font-size:12px;color:#c7d7cb}
+.add-view{font-size:12px;color:#c5d6c9}
+.usage-card strong,.usage-card b{font-size:12px}
+.usage-card small,.usage-card a{font-size:11px;color:#bdcbbf}
+.profile strong{font-size:13px;color:#f0f5f1}
+.profile small{font-size:11px;color:#c1d0c4}
+.topbar{color:#344239}
+.crumb{font-size:13px;color:#68766c}
+.crumb strong{color:#28382d}
+.search input{font-size:13px;color:#2e3b32}
+.search input::placeholder{color:#68756c;opacity:1}
+.search kbd,.composer kbd{font-size:10px;color:#59675d}
+.top-icon,.help{font-size:14px}
+.content{color:#2c3a30}
+.eyebrow{font-size:10px;color:#627267;letter-spacing:1.15px}
+.page-heading h1{font-size:30px;color:#24352a}
+.page-heading p{font-size:13px;color:#5e6c62}
+.date-button{font-size:12px;color:#46564a}
+.metric>div:first-child>span{font-size:12px;color:#59685d}
+.metric>strong{font-size:30px;color:#26372b}
+.metric>strong small{font-size:11px;color:#5e6d62}
+.metric p{font-size:11px;color:#647268}
+.metric .good{color:#33784d}
+.inbox-heading h2{font-size:16px;color:#29382e}
+.inbox-heading h2 span{font-size:10px;color:#4f5f53}
+.inbox-heading p{font-size:11px;color:#657268}
+.filters button{font-size:11px;color:#59675d}
+.filters button small{font-size:10px;color:#627067}
+.sort{font-size:11px;color:#59675d}
+.ticket-person strong{font-size:12px;color:#2e3b32}
+.ticket-person span{font-size:10px;color:#637167}
+.ticket-subject{font-size:12px;color:#2e3b32}
+.ticket-preview{font-size:11px;color:#606e63}
+.priority{font-size:10px;color:#59675d}
+.status{font-size:10px}
+.assignee{font-size:8px}
+.list-footer{font-size:10px;color:#657268}
+.empty{font-size:12px;color:#5c6a60}
+.empty span{font-size:11px;color:#657268}
+.ticket-id{font-size:11px;color:#59675d}
+.resolve{font-size:11px}
+.subject-block h2{font-size:20px;color:#29382e}
+.subject-block>div{font-size:10px;color:#5d6b61}
+.customer strong{font-size:12px;color:#344238}
+.customer small{font-size:10px;color:#657268}
+.conversation{color:#344238}
+.message-meta strong{font-size:11px;color:#344238}
+.message-meta>span{font-size:9px;color:#526157}
+.message-meta time{font-size:10px;color:#5e6c62}
+.message-meta>b{font-size:9px}
+.message p{font-size:13px;color:#3f4d43;line-height:1.65}
+.ticket-controls label>span{font-size:9px;color:#5d6b61}
+.ticket-controls select{font-size:11px;color:#344238}
+.composer-tabs button{font-size:11px;color:#5e6c62}
+.composer-tabs span{font-size:9px;color:#5e6c62}
+.composer textarea{font-size:13px;color:#344238}
+.composer textarea::placeholder{color:#68756b;opacity:1}
+.composer-bottom small{font-size:10px;color:#5d6b61}
+.composer-bottom button{font-size:10px}
+.footer{font-size:10px;color:#5d6b61}
+.save-error{font-size:12px}
+
+.knowledge-heading h1{font-size:30px;color:#24352a}
+.knowledge-heading p{font-size:13px;color:#5e6c62}
+.knowledge-new{font-size:12px}
+.knowledge-stats article span{font-size:11px;color:#58675c}
+.knowledge-stats article strong{font-size:24px;color:#26372b}
+.knowledge-stats>p{font-size:11px;color:#59685d}
+.knowledge-list-head h2{font-size:15px;color:#29382e}
+.knowledge-list-head h2 span{font-size:10px;color:#4f5f53}
+.knowledge-list-head p{font-size:10px;color:#5f6d62}
+.knowledge-item{gap:7px}
+.knowledge-item>strong{font-size:12px;color:#2e3b32}
+.knowledge-summary{font-size:11px;color:#58675c}
+.knowledge-item>small{font-size:10px;color:#5e6d62}
+.knowledge-status{font-size:10px}
+.knowledge-list-foot{font-size:10px;color:#5e6d62}
+.knowledge-empty{font-size:11px;color:#5e6d62}
+.knowledge-editor-head h2{font-size:19px;color:#29382e}
+.editor-kicker{font-size:9px;color:#58685d}
+.knowledge-editor-head select{font-size:10px}
+.knowledge-field{font-size:11px;color:#46564a}
+.knowledge-field input,.knowledge-field textarea{font-size:13px;color:#2e3b32}
+.knowledge-field input::placeholder,.knowledge-field textarea::placeholder{color:#68756b;opacity:1}
+.field-hint{font-size:10px;color:#5e6d62}
+.knowledge-body-field textarea{line-height:1.65}
+.knowledge-editor-foot>span{font-size:10px;color:#59685d}
+.knowledge-editor-foot button{font-size:11px}
+
+@media(max-width:680px){
+  .page-heading h1,.knowledge-heading h1{font-size:24px}
+  .page-heading p,.knowledge-heading p{font-size:12px}
+  .metric>div:first-child>span{font-size:11px}
+  .metric p{font-size:10px}
+  .knowledge-stats article span{font-size:10px}
+  .knowledge-stats article strong{font-size:20px}
+  .ticket-preview,.knowledge-summary{font-size:11px}
+  .message p,.composer textarea,.knowledge-field input,.knowledge-field textarea{font-size:13px}
+}
