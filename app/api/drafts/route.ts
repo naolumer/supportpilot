@@ -1,6 +1,7 @@
 import { getPrisma } from "@/lib/prisma";
+import { withApiErrors } from "@/lib/api-error-response";
 
-export async function GET() {
+export const GET = withApiErrors(async () => {
   const prisma = getPrisma();
   if (!prisma) return Response.json({ error: "DATABASE_URL is not configured." }, { status: 503 });
 
@@ -21,4 +22,4 @@ export async function GET() {
     },
   });
   return Response.json({ drafts });
-}
+});

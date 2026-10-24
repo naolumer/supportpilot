@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { readApiResponse } from "@/lib/read-api-response";
 
 type Report = {
   rangeDays: number;
@@ -34,7 +35,7 @@ export default function ReportingPage() {
     let current = true;
     void fetch(`/api/reporting?range=${range}`, { cache: "no-store" })
       .then(async (response) => {
-        const result = await response.json() as Report & { error?: string };
+        const result = await readApiResponse<Report & { error?: string }>(response);
         if (!response.ok) throw new Error(result.error ?? "Could not load workspace metrics.");
         return result;
       })

@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { initialTickets, type InboxTicket } from "@/lib/demo-data";
+import { readApiResponse } from "@/lib/read-api-response";
 type Status = InboxTicket["status"];
 type Ticket = InboxTicket;
 type DraftSource = { articleId: string; slug: string; title: string; excerpt: string; score: number };
@@ -31,7 +32,7 @@ export default function Home() {
     let current = true;
     void fetch("/api/tickets", { cache: "no-store" })
       .then(async (response) => {
-        const result = await response.json() as { mode?: string; tickets?: Ticket[]; error?: string };
+        const result = await readApiResponse<{ mode?: string; tickets?: Ticket[]; error?: string }>(response);
         if (!response.ok) throw new Error(result.error ?? "Could not load tickets.");
         return result;
       })
@@ -48,7 +49,7 @@ export default function Home() {
         if (approvedDraftId) {
           void fetch(`/api/drafts/${encodeURIComponent(approvedDraftId)}`, { cache: "no-store" })
             .then(async (response) => {
-              const payload = await response.json() as { draft?: { body: string; sources: unknown; ticket: { reference: string } }; error?: string };
+              const payload = await readApiResponse<{ draft?: { body: string; sources: unknown; ticket: { reference: string } }; error?: string }>(response);
               if (!response.ok || !payload.draft) throw new Error(payload.error ?? "Could not load the approved reply.");
               return payload.draft;
             })
@@ -91,7 +92,7 @@ export default function Home() {
       const response = await fetch(`/api/tickets/${encodeURIComponent(id)}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
       });
-      const result = await response.json() as { ticket?: Ticket; error?: string };
+      const result = await readApiResponse<{ ticket?: Ticket; error?: string }>(response);
       if (!response.ok || !result.ticket) throw new Error(result.error ?? "Could not save ticket changes.");
       setTickets(rows => rows.map(ticket => ticket.id === id ? result.ticket! : ticket));
       setSaveError("");
@@ -112,7 +113,7 @@ export default function Home() {
       const generation = fetch(`/api/tickets/${encodeURIComponent(ticketId)}/drafts`, { method: "POST" })
         .then(async (response) => ({
           response,
-          result: await response.json() as { draft?: { id: string; body: string; model: string | null }; sources?: DraftSource[]; error?: string },
+          result: await readApiResponse<{ draft?: { id: string; body: string; model: string | null }; sources?: DraftSource[]; error?: string }>(response),
         }));
       let requestSettled = false;
       void generation.then(() => { requestSettled = true; }, () => { requestSettled = true; });
@@ -124,7 +125,7 @@ export default function Home() {
           try {
             const response = await fetch("/api/drafts", { cache: "no-store" });
             if (!response.ok) continue;
-            const result = await response.json() as { drafts?: { body: string; sources: unknown; createdAt: string; ticket: { reference: string } }[] };
+            const result = await readApiResponse<{ drafts?: { body: string; sources: unknown; createdAt: string; ticket: { reference: string } }[] }>(response);
             const draft = result.drafts?.find((item) => item.ticket.reference === ticketId && Date.parse(item.createdAt) >= requestStartedAt - 10_000);
             if (draft) return draft;
           } catch {
@@ -168,7 +169,7 @@ export default function Home() {
     setTriageNotice("");
     try {
       const response = await fetch(`/api/tickets/${encodeURIComponent(active.id)}/triage`, { method: "POST" });
-      const result = await response.json() as { triage?: { id: string }; error?: string };
+      const result = await readApiResponse<{ triage?: { id: string }; error?: string }>(response);
       if (!response.ok || !result.triage) throw new Error(result.error ?? "Could not analyze this ticket.");
       setTriageNotice("AI triage is ready for " + active.id + ". ");
     } catch (error) {
@@ -191,7 +192,7 @@ export default function Home() {
       const response = await fetch(`/api/tickets/${encodeURIComponent(active.id)}/messages`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body, internal }),
       });
-      const result = await response.json() as { ticket?: Ticket; error?: string };
+      const result = await readApiResponse<{ ticket?: Ticket; error?: string }>(response);
       if (!response.ok || !result.ticket) throw new Error(result.error ?? "Could not save the message.");
       setTickets(rows => rows.map(ticket => ticket.id === active.id ? result.ticket! : ticket));
       setNote("");

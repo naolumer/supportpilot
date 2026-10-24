@@ -1,9 +1,10 @@
 import { getPrisma } from "@/lib/prisma";
+import { withApiErrors } from "@/lib/api-error-response";
 
 const priorityNames = ["URGENT", "HIGH", "NORMAL", "LOW"] as const;
 const categoryNames = ["BILLING", "ACCOUNT_ACCESS", "TECHNICAL_ISSUE", "FEATURE_REQUEST", "HOW_TO", "OTHER"] as const;
 
-export async function GET(request: Request) {
+export const GET = withApiErrors(async (request: Request) => {
   const prisma = getPrisma();
   if (!prisma) return Response.json({ error: "DATABASE_URL is not configured." }, { status: 503 });
   const workspace = await prisma.workspace.findUnique({ where: { slug: process.env.DEMO_WORKSPACE_SLUG ?? "northstar-studio" } });
@@ -90,4 +91,4 @@ export async function GET(request: Request) {
     categorySampleCount: created.filter((ticket) => ticket.triages.length > 0).length,
     startDate: startKey,
   });
-}
+});

@@ -1,5 +1,6 @@
 import { initialKnowledgeArticles } from "@/lib/knowledge-data";
 import { getPrisma } from "@/lib/prisma";
+import { withApiErrors } from "@/lib/api-error-response";
 
 
 function articleInput(value: unknown) {
@@ -27,14 +28,14 @@ async function uniqueSlug(prisma: NonNullable<ReturnType<typeof getPrisma>>, wor
   }
 }
 
-export async function GET() {
+export const GET = withApiErrors(async () => {
   const prisma = getPrisma();
   if (!prisma) return Response.json({ mode: "demo", articles: initialKnowledgeArticles });
   const workspace = await prisma.workspace.findUnique({ where: { slug: process.env.DEMO_WORKSPACE_SLUG ?? "northstar-studio" } });
   if (!workspace) return Response.json({ error: "Database is connected. Run the migration and seed commands first." }, { status: 503 });
   const articles = await prisma.knowledgeArticle.findMany({ where: { workspaceId: workspace.id }, orderBy: { updatedAt: "desc" } });
   return Response.json({ mode: "database", articles: articles.map((article) => ({ ...article, summary: article.summary ?? "" })) });
-}
+});
 
 export async function POST(request: Request) {
   const prisma = getPrisma();

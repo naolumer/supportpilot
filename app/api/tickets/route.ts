@@ -1,6 +1,7 @@
 import { initialTickets } from "@/lib/demo-data";
 import { getPrisma } from "@/lib/prisma";
 import { toInboxTicket } from "@/lib/ticket-serializer";
+import { withApiErrors } from "@/lib/api-error-response";
 
 
 const ticketInclude = {
@@ -9,7 +10,7 @@ const ticketInclude = {
   messages: { orderBy: { createdAt: "asc" as const } },
 };
 
-export async function GET() {
+export const GET = withApiErrors(async () => {
   const prisma = getPrisma();
   if (!prisma) return Response.json({ mode: "demo", tickets: initialTickets });
 
@@ -26,4 +27,4 @@ export async function GET() {
     orderBy: { updatedAt: "desc" },
   });
   return Response.json({ mode: "database", tickets: tickets.map(toInboxTicket) });
-}
+});

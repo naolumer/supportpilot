@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { initialKnowledgeArticles, type KnowledgeArticle } from "@/lib/knowledge-data";
+import { readApiResponse } from "@/lib/read-api-response";
 
 type ArticleStatus = KnowledgeArticle["status"];
 
@@ -28,7 +29,7 @@ export default function KnowledgePage() {
     let current = true;
     void fetch("/api/knowledge", { cache: "no-store" })
       .then(async (response) => {
-        const result = await response.json() as { mode?: string; articles?: KnowledgeArticle[]; error?: string };
+        const result = await readApiResponse<{ mode?: string; articles?: KnowledgeArticle[]; error?: string }>(response);
         if (!response.ok) throw new Error(result.error ?? "Could not load knowledge articles.");
         return result;
       })
@@ -98,7 +99,7 @@ export default function KnowledgePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
         });
-        const result = await response.json() as { article?: KnowledgeArticle; error?: string };
+        const result = await readApiResponse<{ article?: KnowledgeArticle; error?: string }>(response);
         if (!response.ok || !result.article) throw new Error(result.error ?? "Could not save article.");
         saved = result.article;
       } else {

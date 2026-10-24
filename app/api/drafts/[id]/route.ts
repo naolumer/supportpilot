@@ -1,6 +1,7 @@
 import { getPrisma } from "@/lib/prisma";
+import { withApiErrors } from "@/lib/api-error-response";
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const GET = withApiErrors(async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const prisma = getPrisma();
   if (!prisma) return Response.json({ error: "DATABASE_URL is not configured." }, { status: 503 });
 
@@ -14,7 +15,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
   if (!draft) return Response.json({ error: "Approved draft not found." }, { status: 404 });
   return Response.json({ draft });
-}
+});
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const prisma = getPrisma();

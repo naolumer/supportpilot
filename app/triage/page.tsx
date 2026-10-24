@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { readApiResponse } from "@/lib/read-api-response";
 
 type Triage = {
   id: string; category: string; sentiment: string; suggestedPriority: string; confidence: number;
@@ -29,7 +30,7 @@ export default function TriagePage() {
     let current = true;
     void fetch("/api/triage", { cache: "no-store" })
       .then(async (response) => {
-        const result = await response.json() as { triages?: Triage[]; error?: string };
+        const result = await readApiResponse<{ triages?: Triage[]; error?: string }>(response);
         if (!response.ok) throw new Error(result.error ?? "Could not load AI triage.");
         return result;
       })
@@ -47,7 +48,7 @@ export default function TriagePage() {
       const response = await fetch(`/api/triage/${encodeURIComponent(item.id)}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision }),
       });
-      const result = await response.json() as { error?: string };
+      const result = await readApiResponse<{ error?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? "Could not review this triage suggestion.");
       setItems((rows) => rows.filter((row) => row.id !== item.id));
       setNotice(decision === "approve"

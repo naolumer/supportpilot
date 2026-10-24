@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { readApiResponse } from "@/lib/read-api-response";
 
 type Source = { articleId: string; slug: string; title: string; excerpt: string };
 type Draft = {
@@ -36,7 +37,7 @@ export default function DraftsPage() {
     let current = true;
     void fetch("/api/drafts", { cache: "no-store" })
       .then(async (response) => {
-        const result = await response.json() as { drafts?: Draft[]; error?: string };
+        const result = await readApiResponse<{ drafts?: Draft[]; error?: string }>(response);
         if (!response.ok) throw new Error(result.error ?? "Could not load AI drafts.");
         return result;
       })
@@ -55,7 +56,7 @@ export default function DraftsPage() {
       const response = await fetch(`/api/drafts/${encodeURIComponent(draft.id)}`, {
         method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision }),
       });
-      const result = await response.json() as { error?: string; ticketReference?: string };
+      const result = await readApiResponse<{ error?: string; ticketReference?: string }>(response);
       if (!response.ok) throw new Error(result.error ?? "Could not update this draft.");
       setDrafts((rows) => rows.filter((row) => row.id !== draft.id));
       if (decision === "approve" && result.ticketReference) {
