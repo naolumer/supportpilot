@@ -1,24 +1,9 @@
-﻿"use client";
+"use client";
 
-import { useMemo, useState } from "react";
-
-type Status = "Open" | "Pending" | "Resolved";
-type Ticket = {
-  id: string; name: string; email: string; initials: string; color: string;
-  subject: string; preview: string; time: string; status: Status;
-  priority: "Urgent" | "High" | "Normal" | "Low"; channel: string; assignee: string;
-  messages: { author: string; role: string; time: string; body: string; internal?: boolean }[];
-};
-
-const initialTickets: Ticket[] = [
-  { id: "SP-2048", name: "Maya Chen", email: "maya.chen@email.com", initials: "MC", color: "lilac", subject: "Charged twice for my subscription", preview: "I noticed two charges on my card this morning...", time: "8 min", status: "Open", priority: "Urgent", channel: "Email", assignee: "Unassigned", messages: [{ author: "Maya Chen", role: "Customer", time: "Today, 10:42 AM", body: "Hi there — I noticed two charges for my monthly plan on my card this morning. I only meant to subscribe once. Could you check what happened and help me get one of them refunded?" }, { author: "Maya Chen", role: "Customer", time: "Today, 10:44 AM", body: "The two charges are both for $24.00. I can send a screenshot if that helps." }] },
-  { id: "SP-2047", name: "Jordan Lee", email: "jordan.lee@email.com", initials: "JL", color: "peach", subject: "Can’t connect my calendar", preview: "The Google Calendar integration keeps disconnecting...", time: "23 min", status: "Open", priority: "High", channel: "Chat", assignee: "Ava Patel", messages: [{ author: "Jordan Lee", role: "Customer", time: "Today, 10:27 AM", body: "The Google Calendar integration keeps disconnecting every few hours. I have already tried reconnecting it, but it still drops. Is there a known issue?" }] },
-  { id: "SP-2046", name: "Sofia Ramirez", email: "sofia.r@email.com", initials: "SR", color: "mint", subject: "Where can I download my invoices?", preview: "I need copies of the last three months for accounting...", time: "41 min", status: "Open", priority: "Normal", channel: "Email", assignee: "Noah Kim", messages: [{ author: "Sofia Ramirez", role: "Customer", time: "Today, 10:09 AM", body: "Hi! I need copies of my invoices from the last three months for accounting. I looked under settings but couldn't find them. Where should I go?" }] },
-  { id: "SP-2045", name: "Ethan Brooks", email: "ethan.b@email.com", initials: "EB", color: "blue", subject: "Feature request: custom fields", preview: "It would be great if we could add our own fields...", time: "1 hr", status: "Pending", priority: "Low", channel: "Web", assignee: "Ava Patel", messages: [{ author: "Ethan Brooks", role: "Customer", time: "Today, 9:34 AM", body: "It would be great if teams could add custom fields to a workspace. We track a couple of details that don't fit the current setup. Is that something you're considering?" }] },
-  { id: "SP-2044", name: "Amara Okafor", email: "amara.o@email.com", initials: "AO", color: "yellow", subject: "Password reset link expired", preview: "I tried the reset link but it says it has expired...", time: "2 hr", status: "Open", priority: "High", channel: "Email", assignee: "Unassigned", messages: [{ author: "Amara Okafor", role: "Customer", time: "Today, 8:56 AM", body: "I tried to reset my password, but the link says it has expired. Could you send me a new one?" }] },
-  { id: "SP-2043", name: "Oliver Smith", email: "oliver.s@email.com", initials: "OS", color: "rose", subject: "Team member invite not received", preview: "I invited a teammate yesterday, but they never got...", time: "3 hr", status: "Pending", priority: "Normal", channel: "Chat", assignee: "Noah Kim", messages: [{ author: "Oliver Smith", role: "Customer", time: "Today, 7:51 AM", body: "I invited a teammate yesterday, but they never got the email. I checked the address and it looks right. Can you help?" }] },
-  { id: "SP-2042", name: "Priya Nair", email: "priya.n@email.com", initials: "PN", color: "mint", subject: "How do I export a report?", preview: "Looking for a CSV export of our monthly activity...", time: "Yesterday", status: "Resolved", priority: "Normal", channel: "Email", assignee: "You", messages: [{ author: "Priya Nair", role: "Customer", time: "Yesterday, 4:18 PM", body: "I'm looking for a CSV export of our monthly activity report. Is there a way to download one?" }, { author: "You", role: "Agent", time: "Yesterday, 4:32 PM", body: "You can export a report from Analytics. Open the date range you need, then use the Download CSV button in the top right." }] },
-];
+import { useEffect, useMemo, useState } from "react";
+import { initialTickets, type InboxTicket } from "@/lib/demo-data";
+type Status = InboxTicket["status"];
+type Ticket = InboxTicket;
 
 function Icon({ children }: { children: string }) { return <span className="icon" aria-hidden="true">{children}</span>; }
 function Avatar({ ticket }: { ticket: Ticket }) { return <span className={`avatar ${ticket.color}`}>{ticket.initials}</span>; }
@@ -30,6 +15,31 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [note, setNote] = useState("");
   const [composerMode, setComposerMode] = useState<"reply" | "note">("reply");
+  const [databaseMode, setDatabaseMode] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  useEffect(() => {
+    let current = true;
+    void fetch("/api/tickets", { cache: "no-store" })
+      .then(async (response) => {
+        const result = await response.json() as { mode?: string; tickets?: Ticket[]; error?: string };
+        if (!response.ok) throw new Error(result.error ?? "Could not load tickets.");
+        return result;
+      })
+      .then((result) => {
+        if (!current || !result.tickets) return;
+        setTickets(result.tickets);
+        setSelectedId(result.tickets[0]?.id ?? "");
+        setDatabaseMode(result.mode === "database");
+        setSaveError("");
+      })
+      .catch((error: unknown) => {
+        if (current) {
+          setDatabaseMode(false);
+          setSaveError(error instanceof Error ? error.message : "Could not load saved tickets.");
+        }
+      });
+    return () => { current = false; };
+  }, []);
   const visible = useMemo(() => tickets.filter((ticket) => {
     const term = query.trim().toLowerCase();
     const matchesQuery = `${ticket.id} ${ticket.name} ${ticket.subject} ${ticket.preview}`.toLowerCase().includes(term);
@@ -37,12 +47,44 @@ export default function Home() {
   }), [tickets, filter, query]);
   const active = visible.find((ticket) => ticket.id === selectedId) ?? visible[0] ?? null;
   const counts = { All: tickets.length, Open: tickets.filter(t => t.status === "Open").length, Pending: tickets.filter(t => t.status === "Pending").length, Resolved: tickets.filter(t => t.status === "Resolved").length };
-  function update(id: string, patch: Partial<Ticket>) { setTickets(rows => rows.map(ticket => ticket.id === id ? { ...ticket, ...patch } : ticket)); }
-  function addMessage() {
-    if (!note.trim() || !active) return;
+  async function update(id: string, patch: Partial<Ticket>) {
+    if (!databaseMode) {
+      setTickets(rows => rows.map(ticket => ticket.id === id ? { ...ticket, ...patch } : ticket));
+      return;
+    }
+    try {
+      const response = await fetch(`/api/tickets/${encodeURIComponent(id)}`, {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch),
+      });
+      const result = await response.json() as { ticket?: Ticket; error?: string };
+      if (!response.ok || !result.ticket) throw new Error(result.error ?? "Could not save ticket changes.");
+      setTickets(rows => rows.map(ticket => ticket.id === id ? result.ticket! : ticket));
+      setSaveError("");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save ticket changes.");
+    }
+  }
+  async function addMessage() {
+    const body = note.trim();
+    if (!body || !active) return;
     const internal = composerMode === "note";
-    setTickets(rows => rows.map(ticket => ticket.id === active.id ? { ...ticket, messages: [...ticket.messages, { author: "You", role: internal ? "Internal note" : "Agent", time: "Just now", body: note.trim(), internal }] } : ticket));
-    setNote("");
+    if (!databaseMode) {
+      setTickets(rows => rows.map(ticket => ticket.id === active.id ? { ...ticket, messages: [...ticket.messages, { author: "You", role: internal ? "Internal note" : "Agent", time: "Just now", body, internal }] } : ticket));
+      setNote("");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/tickets/${encodeURIComponent(active.id)}/messages`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body, internal }),
+      });
+      const result = await response.json() as { ticket?: Ticket; error?: string };
+      if (!response.ok || !result.ticket) throw new Error(result.error ?? "Could not save the message.");
+      setTickets(rows => rows.map(ticket => ticket.id === active.id ? result.ticket! : ticket));
+      setNote("");
+      setSaveError("");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not save the message.");
+    }
   }
 
   return <main className="app-shell">
@@ -69,6 +111,7 @@ export default function Home() {
       <header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>Inbox</strong></div><div className="top-actions"><label className="search"><Icon>⌕</Icon><input aria-label="Search tickets" placeholder="Search tickets..." value={query} onChange={event => setQuery(event.target.value)}/><kbd>⌘ K</kbd></label><button className="top-icon" aria-label="Notifications">♧<i/></button><button className="help">?</button></div></header>
       <div className="content">
         <div className="page-heading"><div><div className="eyebrow"><i/> FRIDAY, OCTOBER 23, 2026</div><h1>Good morning, Naol <span>✳</span></h1><p>Here’s what’s happening with your support inbox today.</p></div><button className="date-button">◷ &nbsp;Last 7 days &nbsp;⌄</button></div>
+        {saveError && <p className="save-error" role="alert">{saveError}</p>}
         <section className="metrics" aria-label="Inbox overview">
           <article className="metric"><div><span>Open tickets</span><b className="metric-icon green">▤</b></div><strong>{counts.Open + counts.Pending}<small className="good">↓ 12%</small></strong><p>vs. previous 7 days</p><div className="sparkline"><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
           <article className="metric"><div><span>Needs a reply</span><b className="metric-icon purple">◌</b></div><strong>{counts.Open}<small>in your queue</small></strong><p>2 tickets are unassigned</p><div className="progress"><i style={{width:"55%"}}/></div></article>
