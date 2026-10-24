@@ -25,6 +25,8 @@ export default function Home() {
   const [draftDetected, setDraftDetected] = useState(false);
   const [draftNotice, setDraftNotice] = useState("");
   const [triaging, setTriaging] = useState(false);
+  const [savingMessage, setSavingMessage] = useState(false);
+  const [messageNotice, setMessageNotice] = useState("");
   const [triageNotice, setTriageNotice] = useState("");
   const [draftSources, setDraftSources] = useState<DraftSource[]>([]);
   const selectedIdRef = useRef(initialTickets[0].id);
@@ -178,17 +180,20 @@ export default function Home() {
   }
   async function addMessage() {
     const body = note.trim();
-    if (!body || !active) return;
+    if (!body || !active || savingMessage) return;
     const internal = composerMode === "note";
-    if (!databaseMode) {
-      setTickets(rows => rows.map(ticket => ticket.id === active.id ? { ...ticket, messages: [...ticket.messages, { author: "You", role: internal ? "Internal note" : "Agent", time: "Just now", body, internal }] } : ticket));
-      setNote("");
-      setDraftSources([]);
-      setDraftDetected(false);
-      setDraftNotice("");
-      return;
-    }
+    setSavingMessage(true);
+    setMessageNotice("");
     try {
+      if (!databaseMode) {
+        setTickets(rows => rows.map(ticket => ticket.id === active.id ? { ...ticket, messages: [...ticket.messages, { author: "You", role: internal ? "Internal note" : "Agent", time: "Just now", body, internal }] } : ticket));
+        setNote("");
+        setDraftSources([]);
+        setDraftDetected(false);
+        setDraftNotice("");
+        setMessageNotice(internal ? "Note added to the conversation." : "Reply added to the conversation.");
+        return;
+      }
       const response = await fetch(`/api/tickets/${encodeURIComponent(active.id)}/messages`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body, internal }),
       });
@@ -200,36 +205,20 @@ export default function Home() {
       setDraftDetected(false);
       setDraftNotice("");
       setSaveError("");
+      setMessageNotice(internal ? "Note added to the conversation." : "Reply added to the conversation.");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not save the message.");
+    } finally {
+      setSavingMessage(false);
     }
   }
 
   return <main className="app-shell">
-    <aside className="sidebar">
-      <a className="brand" href="#inbox"><span className="brand-mark"><i/><i/><i/><i/></span>supportpilot<span className="beta">BETA</span></a>
-      <button className="workspace"><b>N</b><span><strong>Northstar Studio</strong><small>Free workspace</small></span><span className="chevron">⌄</span></button>
-      <p className="nav-label">WORKSPACE</p>
-      <nav className="nav-list" aria-label="Workspace navigation">
-        <Link className="nav-link active" href="/"><Icon>▤</Icon>Inbox <small>7</small></Link>
-        <Link className="nav-link" href="/drafts"><Icon>✧</Icon>AI drafts</Link>
-        <Link className="nav-link" href="/triage"><Icon>AI</Icon>AI triage</Link><Link className="nav-link" href="/knowledge"><Icon>▣</Icon>Knowledge base</Link>
-        <Link className="nav-link" href="/reporting"><Icon>▥</Icon>Reporting</Link>
-      </nav>
-      <p className="nav-label views-label">YOUR VIEWS <span>＋</span></p>
-      <div className="view-link"><i className="green-dot"/>My open tickets <small>4</small></div>
-      <div className="view-link"><i className="orange-dot"/>Unassigned <small>2</small></div>
-      <button className="add-view">＋ Add a view</button>
-      <div className="sidebar-spacer"/>
-      <div className="usage-card"><div><strong>AI usage</strong><b>72%</b></div><span className="usage-track"><i/></span><small>72 of 100 AI actions used</small><a href="#plans">See plans →</a></div>
-      <button className="profile"><span className="profile-avatar">N</span><span><strong>Naol Umer</strong><small>Admin</small></span><span className="profile-more">···</span></button>
-    </aside>
-
     <section className="main-area" id="inbox">
       <header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>Inbox</strong></div><div className="top-actions"><label className="search"><Icon>⌕</Icon><input aria-label="Search tickets" placeholder="Search tickets..." value={query} onChange={event => setQuery(event.target.value)}/><kbd>⌘ K</kbd></label><button className="top-icon" aria-label="Notifications">♧<i/></button><button className="help">?</button></div></header>
       <div className="content">
-        <div className="page-heading"><div><div className="eyebrow"><i/> FRIDAY, OCTOBER 23, 2026</div><h1>Good morning, Naol <span>✳</span></h1><p>Here’s what’s happening with your support inbox today.</p></div><button className="date-button">◷ &nbsp;Last 7 days &nbsp;⌄</button></div>
-        {saveError && <p className="save-error" role="alert">{saveError}</p>}{draftNotice && <p className="save-success" role="status">{draftNotice}<Link href="/drafts">Review drafts</Link></p>}{triageNotice && <p className="save-success" role="status">{triageNotice}<Link href="/triage">Review suggestion</Link></p>}
+        <div className="page-heading"><div><div className="eyebrow"><i/> FRIDAY, OCTOBER 23, 2026</div><h1>Good morning, Naol <span>✳</span></h1><p>Here’s what’s happening with your support inbox today.</p></div><button className="date-button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Last 7 days</span><svg className="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
+        {saveError && <p className="save-error" role="alert">{saveError}</p>}{messageNotice && <p className="save-success" role="status">{messageNotice}</p>}{draftNotice && <p className="save-success" role="status">{draftNotice}<Link href="/drafts">Review drafts</Link></p>}{triageNotice && <p className="save-success" role="status">{triageNotice}<Link href="/triage">Review suggestion</Link></p>}
         <section className="metrics" aria-label="Inbox overview">
           <article className="metric"><div><span>Open tickets</span><b className="metric-icon green">▤</b></div><strong>{counts.Open + counts.Pending}<small className="good">↓ 12%</small></strong><p>vs. previous 7 days</p><div className="sparkline"><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
           <article className="metric"><div><span>Needs a reply</span><b className="metric-icon purple">◌</b></div><strong>{counts.Open}<small>in your queue</small></strong><p>2 tickets are unassigned</p><div className="progress"><i style={{width:"55%"}}/></div></article>
@@ -239,8 +228,8 @@ export default function Home() {
 
         <section className="inbox-panel" aria-label="Support inbox">
           <div className="ticket-column"><div className="inbox-heading"><div><h2>Inbox <span>{tickets.length}</span></h2><p>Your team’s conversations</p></div><button className="more" aria-label="More inbox options">···</button></div>
-            <div className="list-toolbar"><div className="filters" role="tablist" aria-label="Filter tickets">{(["All", "Open", "Pending", "Resolved"] as const).map(item => <button key={item} role="tab" aria-selected={filter === item} className={filter === item ? "chosen" : ""} onClick={() => setFilter(item)}>{item}<small>{counts[item]}</small></button>)}</div><button className="sort">Newest ⌄</button></div>
-            <div className="ticket-list" role="listbox" aria-label="Tickets">{visible.length ? visible.map(ticket => <button key={ticket.id} className={`ticket-row ${active?.id === ticket.id ? "selected" : ""}`} role="option" aria-selected={active?.id === ticket.id} onClick={() => { selectedIdRef.current = ticket.id; setSelectedId(ticket.id); setNote(""); setDraftSources([]); setDraftDetected(false); setDraftNotice(""); }}>
+            <div className="list-toolbar"><div className="filters" role="tablist" aria-label="Filter tickets">{(["All", "Open", "Pending", "Resolved"] as const).map(item => <button key={item} role="tab" aria-selected={filter === item} className={filter === item ? "chosen" : ""} onClick={() => setFilter(item)}>{item}<small>{counts[item]}</small></button>)}</div><button className="sort">Newest<svg className="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
+            <div className="ticket-list" role="listbox" aria-label="Tickets">{visible.length ? visible.map(ticket => <button key={ticket.id} className={`ticket-row ${active?.id === ticket.id ? "selected" : ""}`} role="option" aria-selected={active?.id === ticket.id} onClick={() => { selectedIdRef.current = ticket.id; setSelectedId(ticket.id); setNote(""); setDraftSources([]); setDraftDetected(false); setDraftNotice(""); setMessageNotice(""); }}>
               <div className="ticket-top"><Avatar ticket={ticket}/><div className="ticket-person"><strong>{ticket.name}</strong><span>{ticket.time}</span></div><span className="channel" title={ticket.channel}>{ticket.channel === "Chat" ? "◌" : ticket.channel === "Web" ? "◫" : "✉"}</span></div>
               <strong className="ticket-subject">{ticket.subject}</strong><p className="ticket-preview">{ticket.preview}</p><div className="ticket-tags"><span className={`priority ${ticket.priority.toLowerCase()}`}><i/>{ticket.priority}</span><span className={`status ${ticket.status.toLowerCase()}`}>{ticket.status}</span>{ticket.assignee !== "Unassigned" && <span className="assignee">{ticket.assignee === "You" ? "NU" : ticket.assignee.split(" ").map(p => p[0]).join("")}</span>}</div>
             </button>) : <div className="empty"><b>No tickets found</b><span>Try a different search or filter.</span></div>}</div>
@@ -252,7 +241,7 @@ export default function Home() {
             <div className="customer"><div><Avatar ticket={active}/><span><strong>{active.name}</strong><small>{active.email}</small></span></div><div><button aria-label="Email customer">✉</button><button aria-label="Customer details">♙</button></div></div>
             <div className="conversation" aria-label="Conversation history">{active.messages.map((message, index) => <div className={`message ${message.internal ? "internal" : ""}`} key={`${active.id}-${index}`}><span className={`message-avatar ${message.author === "You" ? "agent" : active.color}`}>{message.author === "You" ? "NU" : active.initials}</span><div><div className="message-meta"><strong>{message.author}</strong>{message.internal && <b>INTERNAL NOTE</b>}<span>{message.role}</span><time>{message.time}</time></div><p>{message.body}</p></div></div>)}</div>
             <div className="ticket-controls"><label><span>STATUS</span><select value={active.status} onChange={event => update(active.id, {status: event.target.value as Status})}><option>Open</option><option>Pending</option><option>Resolved</option></select></label><label><span>ASSIGNED TO</span><select value={active.assignee} onChange={event => update(active.id, {assignee: event.target.value})}><option>Unassigned</option><option>Ava Patel</option><option>Noah Kim</option><option>You</option></select></label></div>
-            <div className="composer"><div className="composer-tabs"><button className={composerMode === "reply" ? "current" : ""} onClick={() => setComposerMode("reply")}>Reply</button><button className={composerMode === "note" ? "current" : ""} onClick={() => setComposerMode("note")}>Internal note</button><button className="ai-draft-button" type="button" onClick={generateDraft} disabled={drafting || draftDetected || !active}>{drafting ? "Generating draft..." : draftDetected ? "Draft saved" : "Draft with AI"}</button><span>AI drafts need your review</span></div>{draftSources.length > 0 && <div className="draft-sources"><strong>Sources from published articles</strong>{draftSources.map(source => <a key={source.articleId} href="/knowledge"><span>{source.title}</span><small>{source.excerpt}</small></a>)}</div>}<textarea aria-label={composerMode === "note" ? "Write an internal note" : "Write a reply"} placeholder={composerMode === "note" ? "Add an internal note for your team…" : "Write a reply (demo only)…"} value={note} onChange={event => setNote(event.target.value)}/><div className="composer-bottom"><small><kbd>⌘</kbd> + <kbd>↵</kbd> to send</small><button disabled={!note.trim()} onClick={addMessage}>{composerMode === "note" ? "Add note" : "Add reply"} <span>↗</span></button></div></div>
+            <div className="composer"><div className="composer-tabs"><button disabled={savingMessage} className={composerMode === "reply" ? "current" : ""} onClick={() => { setComposerMode("reply"); setMessageNotice(""); }}>Reply</button><button disabled={savingMessage} className={composerMode === "note" ? "current" : ""} onClick={() => { setComposerMode("note"); setMessageNotice(""); }}>Internal note</button><button className="ai-draft-button" type="button" onClick={generateDraft} disabled={drafting || savingMessage || draftDetected || !active}>{drafting ? "Generating draft..." : draftDetected ? "Draft saved" : "Draft with AI"}</button><span>AI drafts need your review</span></div>{draftSources.length > 0 && <div className="draft-sources"><strong>Sources from published articles</strong>{draftSources.map(source => <a key={source.articleId} href="/knowledge"><span>{source.title}</span><small>{source.excerpt}</small></a>)}</div>}<textarea disabled={savingMessage} aria-label={composerMode === "note" ? "Write an internal note" : "Write a reply"} placeholder={composerMode === "note" ? "Add an internal note for your team…" : "Write a reply (demo only)…"} value={note} onChange={event => { setNote(event.target.value); setMessageNotice(""); }}/><div className="composer-bottom"><small><kbd>⌘</kbd> + <kbd>↵</kbd> to send</small><button disabled={!note.trim() || savingMessage} aria-busy={savingMessage} onClick={addMessage}>{savingMessage && <span className="button-spinner" aria-hidden="true"/>}{savingMessage ? (composerMode === "note" ? "Adding note…" : "Adding reply…") : (composerMode === "note" ? "Add note" : "Add reply")} {!savingMessage && <span>↗</span>}</button></div></div>
           </article> : <div className="detail-empty">Select a ticket to see its conversation.</div>}
         </section>
         <footer className="footer"><span><i/> All systems operational</span><span>SupportPilot demo workspace <b>·</b> Last synced just now</span></footer>
