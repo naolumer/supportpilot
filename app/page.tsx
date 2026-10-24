@@ -93,9 +93,9 @@ export default function Home() {
       <button className="workspace"><b>N</b><span><strong>Northstar Studio</strong><small>Free workspace</small></span><span className="chevron">⌄</span></button>
       <p className="nav-label">WORKSPACE</p>
       <nav className="nav-list" aria-label="Workspace navigation">
-        <button className="nav-link active"><Icon>▤</Icon>Inbox <small>7</small></button>
+        <Link className="nav-link active" href="/"><Icon>▤</Icon>Inbox <small>7</small></Link>
         <button className="nav-link"><Icon>✧</Icon>AI drafts <small>3</small></button>
-        <button className="nav-link"><Icon>▣</Icon>Knowledge base</button>
+        <Link className="nav-link" href="/knowledge"><Icon>▣</Icon>Knowledge base</Link>
         <button className="nav-link"><Icon>▥</Icon>Reporting</button>
       </nav>
       <p className="nav-label views-label">YOUR VIEWS <span>＋</span></p>
