@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { initialTickets, type InboxTicket } from "@/lib/demo-data";
 type Status = InboxTicket["status"];
 type Ticket = InboxTicket;
@@ -21,9 +21,12 @@ export default function Home() {
   const [databaseMode, setDatabaseMode] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [drafting, setDrafting] = useState(false);
+  const [draftDetected, setDraftDetected] = useState(false);
+  const [draftNotice, setDraftNotice] = useState("");
   const [triaging, setTriaging] = useState(false);
   const [triageNotice, setTriageNotice] = useState("");
   const [draftSources, setDraftSources] = useState<DraftSource[]>([]);
+  const selectedIdRef = useRef(initialTickets[0].id);
   useEffect(() => {
     let current = true;
     void fetch("/api/tickets", { cache: "no-store" })
@@ -36,7 +39,9 @@ export default function Home() {
         if (!current || !result.tickets) return;
         setTickets(result.tickets);
         const requestedTicket = new URLSearchParams(window.location.search).get("ticket");
-        setSelectedId(result.tickets.find(ticket => ticket.id === requestedTicket)?.id ?? result.tickets[0]?.id ?? "");
+        const nextSelectedId = result.tickets.find(ticket => ticket.id === requestedTicket)?.id ?? result.tickets[0]?.id ?? "";
+        selectedIdRef.current = nextSelectedId;
+        setSelectedId(nextSelectedId);
         setDatabaseMode(result.mode === "database");
         setSaveError("");
       })
@@ -54,6 +59,7 @@ export default function Home() {
     return matchesQuery && (filter === "All" || ticket.status === filter);
   }), [tickets, filter, query]);
   const active = visible.find((ticket) => ticket.id === selectedId) ?? visible[0] ?? null;
+  useEffect(() => { selectedIdRef.current = active?.id ?? ""; }, [active?.id]);
   const counts = { All: tickets.length, Open: tickets.filter(t => t.status === "Open").length, Pending: tickets.filter(t => t.status === "Pending").length, Resolved: tickets.filter(t => t.status === "Resolved").length };
   async function update(id: string, patch: Partial<Ticket>) {
     if (!databaseMode) {
@@ -73,17 +79,61 @@ export default function Home() {
     }
   }
   async function generateDraft() {
-    if (!active || drafting) return;
+    if (!active || drafting || draftDetected) return;
+    const ticketId = active.id;
+    const requestStartedAt = Date.now();
     setDrafting(true);
+    setDraftDetected(false);
+    setDraftNotice("");
     setSaveError("");
     setDraftSources([]);
     try {
-      const response = await fetch(`/api/tickets/${encodeURIComponent(active.id)}/drafts`, { method: "POST" });
-      const result = await response.json() as { draft?: { id: string; body: string; model: string | null }; sources?: DraftSource[]; error?: string };
+      const generation = fetch(`/api/tickets/${encodeURIComponent(ticketId)}/drafts`, { method: "POST" })
+        .then(async (response) => ({
+          response,
+          result: await response.json() as { draft?: { id: string; body: string; model: string | null }; sources?: DraftSource[]; error?: string },
+        }));
+      let requestSettled = false;
+      void generation.then(() => { requestSettled = true; }, () => { requestSettled = true; });
+
+      const savedDraft = async () => {
+        while (!requestSettled) {
+          await new Promise((resolve) => setTimeout(resolve, 2500));
+          if (requestSettled) return null;
+          try {
+            const response = await fetch("/api/drafts", { cache: "no-store" });
+            if (!response.ok) continue;
+            const result = await response.json() as { drafts?: { body: string; sources: unknown; createdAt: string; ticket: { reference: string } }[] };
+            const draft = result.drafts?.find((item) => item.ticket.reference === ticketId && Date.parse(item.createdAt) >= requestStartedAt - 10_000);
+            if (draft) return draft;
+          } catch {
+            // A failed status check should not interrupt the generation request.
+          }
+        }
+        return null;
+      };
+
+      const detected = await Promise.race([savedDraft(), generation.then(() => null)]);
+      if (detected) {
+        if (selectedIdRef.current === ticketId) {
+          setNote(detected.body);
+          setComposerMode("reply");
+          setDraftSources(Array.isArray(detected.sources) ? detected.sources as DraftSource[] : []);
+          setDraftDetected(true);
+        }
+        setDraftNotice(`Draft for ${ticketId} saved. You can review it in AI drafts.`);
+        return;
+      }
+
+      const { response, result } = await generation;
       if (!response.ok || !result.draft) throw new Error(result.error ?? "Could not generate an AI draft.");
-      setNote(result.draft.body);
-      setComposerMode("reply");
-      setDraftSources(result.sources ?? []);
+      if (selectedIdRef.current === ticketId) {
+        setNote(result.draft.body);
+        setComposerMode("reply");
+        setDraftSources(result.sources ?? []);
+        setDraftDetected(true);
+      }
+      setDraftNotice(`Draft for ${ticketId} saved. You can review it in AI drafts.`);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not generate an AI draft.");
     } finally {
@@ -112,6 +162,8 @@ export default function Home() {
       setTickets(rows => rows.map(ticket => ticket.id === active.id ? { ...ticket, messages: [...ticket.messages, { author: "You", role: internal ? "Internal note" : "Agent", time: "Just now", body, internal }] } : ticket));
       setNote("");
       setDraftSources([]);
+      setDraftDetected(false);
+      setDraftNotice("");
       return;
     }
     try {
@@ -123,6 +175,8 @@ export default function Home() {
       setTickets(rows => rows.map(ticket => ticket.id === active.id ? result.ticket! : ticket));
       setNote("");
       setDraftSources([]);
+      setDraftDetected(false);
+      setDraftNotice("");
       setSaveError("");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not save the message.");
@@ -136,7 +190,7 @@ export default function Home() {
       <p className="nav-label">WORKSPACE</p>
       <nav className="nav-list" aria-label="Workspace navigation">
         <Link className="nav-link active" href="/"><Icon>▤</Icon>Inbox <small>7</small></Link>
-        <Link className="nav-link" href="/drafts"><Icon>âœ§</Icon>AI drafts</Link>
+        <Link className="nav-link" href="/drafts"><Icon>✧</Icon>AI drafts</Link>
         <Link className="nav-link" href="/triage"><Icon>AI</Icon>AI triage</Link><Link className="nav-link" href="/knowledge"><Icon>▣</Icon>Knowledge base</Link>
         <Link className="nav-link" href="/reporting"><Icon>▥</Icon>Reporting</Link>
       </nav>
@@ -153,7 +207,7 @@ export default function Home() {
       <header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>Inbox</strong></div><div className="top-actions"><label className="search"><Icon>⌕</Icon><input aria-label="Search tickets" placeholder="Search tickets..." value={query} onChange={event => setQuery(event.target.value)}/><kbd>⌘ K</kbd></label><button className="top-icon" aria-label="Notifications">♧<i/></button><button className="help">?</button></div></header>
       <div className="content">
         <div className="page-heading"><div><div className="eyebrow"><i/> FRIDAY, OCTOBER 23, 2026</div><h1>Good morning, Naol <span>✳</span></h1><p>Here’s what’s happening with your support inbox today.</p></div><button className="date-button">◷ &nbsp;Last 7 days &nbsp;⌄</button></div>
-        {saveError && <p className="save-error" role="alert">{saveError}</p>}{triageNotice && <p className="save-success" role="status">{triageNotice}<Link href="/triage">Review suggestion</Link></p>}
+        {saveError && <p className="save-error" role="alert">{saveError}</p>}{draftNotice && <p className="save-success" role="status">{draftNotice}<Link href="/drafts">Review drafts</Link></p>}{triageNotice && <p className="save-success" role="status">{triageNotice}<Link href="/triage">Review suggestion</Link></p>}
         <section className="metrics" aria-label="Inbox overview">
           <article className="metric"><div><span>Open tickets</span><b className="metric-icon green">▤</b></div><strong>{counts.Open + counts.Pending}<small className="good">↓ 12%</small></strong><p>vs. previous 7 days</p><div className="sparkline"><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
           <article className="metric"><div><span>Needs a reply</span><b className="metric-icon purple">◌</b></div><strong>{counts.Open}<small>in your queue</small></strong><p>2 tickets are unassigned</p><div className="progress"><i style={{width:"55%"}}/></div></article>
@@ -164,7 +218,7 @@ export default function Home() {
         <section className="inbox-panel" aria-label="Support inbox">
           <div className="ticket-column"><div className="inbox-heading"><div><h2>Inbox <span>{tickets.length}</span></h2><p>Your team’s conversations</p></div><button className="more" aria-label="More inbox options">···</button></div>
             <div className="list-toolbar"><div className="filters" role="tablist" aria-label="Filter tickets">{(["All", "Open", "Pending", "Resolved"] as const).map(item => <button key={item} role="tab" aria-selected={filter === item} className={filter === item ? "chosen" : ""} onClick={() => setFilter(item)}>{item}<small>{counts[item]}</small></button>)}</div><button className="sort">Newest ⌄</button></div>
-            <div className="ticket-list" role="listbox" aria-label="Tickets">{visible.length ? visible.map(ticket => <button key={ticket.id} className={`ticket-row ${active?.id === ticket.id ? "selected" : ""}`} role="option" aria-selected={active?.id === ticket.id} onClick={() => { setSelectedId(ticket.id); setNote(""); setDraftSources([]); }}>
+            <div className="ticket-list" role="listbox" aria-label="Tickets">{visible.length ? visible.map(ticket => <button key={ticket.id} className={`ticket-row ${active?.id === ticket.id ? "selected" : ""}`} role="option" aria-selected={active?.id === ticket.id} onClick={() => { selectedIdRef.current = ticket.id; setSelectedId(ticket.id); setNote(""); setDraftSources([]); setDraftDetected(false); setDraftNotice(""); }}>
               <div className="ticket-top"><Avatar ticket={ticket}/><div className="ticket-person"><strong>{ticket.name}</strong><span>{ticket.time}</span></div><span className="channel" title={ticket.channel}>{ticket.channel === "Chat" ? "◌" : ticket.channel === "Web" ? "◫" : "✉"}</span></div>
               <strong className="ticket-subject">{ticket.subject}</strong><p className="ticket-preview">{ticket.preview}</p><div className="ticket-tags"><span className={`priority ${ticket.priority.toLowerCase()}`}><i/>{ticket.priority}</span><span className={`status ${ticket.status.toLowerCase()}`}>{ticket.status}</span>{ticket.assignee !== "Unassigned" && <span className="assignee">{ticket.assignee === "You" ? "NU" : ticket.assignee.split(" ").map(p => p[0]).join("")}</span>}</div>
             </button>) : <div className="empty"><b>No tickets found</b><span>Try a different search or filter.</span></div>}</div>
@@ -176,7 +230,7 @@ export default function Home() {
             <div className="customer"><div><Avatar ticket={active}/><span><strong>{active.name}</strong><small>{active.email}</small></span></div><div><button aria-label="Email customer">✉</button><button aria-label="Customer details">♙</button></div></div>
             <div className="conversation" aria-label="Conversation history">{active.messages.map((message, index) => <div className={`message ${message.internal ? "internal" : ""}`} key={`${active.id}-${index}`}><span className={`message-avatar ${message.author === "You" ? "agent" : active.color}`}>{message.author === "You" ? "NU" : active.initials}</span><div><div className="message-meta"><strong>{message.author}</strong>{message.internal && <b>INTERNAL NOTE</b>}<span>{message.role}</span><time>{message.time}</time></div><p>{message.body}</p></div></div>)}</div>
             <div className="ticket-controls"><label><span>STATUS</span><select value={active.status} onChange={event => update(active.id, {status: event.target.value as Status})}><option>Open</option><option>Pending</option><option>Resolved</option></select></label><label><span>ASSIGNED TO</span><select value={active.assignee} onChange={event => update(active.id, {assignee: event.target.value})}><option>Unassigned</option><option>Ava Patel</option><option>Noah Kim</option><option>You</option></select></label></div>
-            <div className="composer"><div className="composer-tabs"><button className={composerMode === "reply" ? "current" : ""} onClick={() => setComposerMode("reply")}>Reply</button><button className={composerMode === "note" ? "current" : ""} onClick={() => setComposerMode("note")}>Internal note</button><button className="ai-draft-button" type="button" onClick={generateDraft} disabled={drafting || !active}>{drafting ? "Drafting..." : "Draft with AI"}</button><span>AI drafts need your review</span></div>{draftSources.length > 0 && <div className="draft-sources"><strong>Sources from published articles</strong>{draftSources.map(source => <a key={source.articleId} href="/knowledge"><span>{source.title}</span><small>{source.excerpt}</small></a>)}</div>}<textarea aria-label={composerMode === "note" ? "Write an internal note" : "Write a reply"} placeholder={composerMode === "note" ? "Add an internal note for your team…" : "Write a reply (demo only)…"} value={note} onChange={event => setNote(event.target.value)}/><div className="composer-bottom"><small><kbd>⌘</kbd> + <kbd>↵</kbd> to send</small><button disabled={!note.trim()} onClick={addMessage}>{composerMode === "note" ? "Add note" : "Add reply"} <span>↗</span></button></div></div>
+            <div className="composer"><div className="composer-tabs"><button className={composerMode === "reply" ? "current" : ""} onClick={() => setComposerMode("reply")}>Reply</button><button className={composerMode === "note" ? "current" : ""} onClick={() => setComposerMode("note")}>Internal note</button><button className="ai-draft-button" type="button" onClick={generateDraft} disabled={drafting || draftDetected || !active}>{drafting ? "Generating draft..." : draftDetected ? "Draft saved" : "Draft with AI"}</button><span>AI drafts need your review</span></div>{draftSources.length > 0 && <div className="draft-sources"><strong>Sources from published articles</strong>{draftSources.map(source => <a key={source.articleId} href="/knowledge"><span>{source.title}</span><small>{source.excerpt}</small></a>)}</div>}<textarea aria-label={composerMode === "note" ? "Write an internal note" : "Write a reply"} placeholder={composerMode === "note" ? "Add an internal note for your team…" : "Write a reply (demo only)…"} value={note} onChange={event => setNote(event.target.value)}/><div className="composer-bottom"><small><kbd>⌘</kbd> + <kbd>↵</kbd> to send</small><button disabled={!note.trim()} onClick={addMessage}>{composerMode === "note" ? "Add note" : "Add reply"} <span>↗</span></button></div></div>
           </article> : <div className="detail-empty">Select a ticket to see its conversation.</div>}
         </section>
         <footer className="footer"><span><i/> All systems operational</span><span>SupportPilot demo workspace <b>·</b> Last synced just now</span></footer>

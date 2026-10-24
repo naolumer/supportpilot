@@ -50,12 +50,12 @@ export default function ReportingPage() {
 
   return <main className="reporting-page">
     <header className="reporting-header">
-      <div><Link className="drafts-back" href="/">â† Back to inbox</Link><p className="drafts-kicker">WORKSPACE / REPORTING</p><h1>Support performance</h1><p className="drafts-subtitle">A live view of ticket volume, queue health, and team workload.</p></div>
+      <div><Link className="drafts-back" href="/">← Back to inbox</Link><p className="drafts-kicker">WORKSPACE / REPORTING</p><h1>Support performance</h1><p className="drafts-subtitle">A live view of ticket volume, queue health, and team workload.</p></div>
       <label className="report-range">Date range<select value={range} onChange={(event) => { setLoading(true); setRange(Number(event.target.value) as 7 | 30); }}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option></select></label>
     </header>
 
     {error && <p className="drafts-alert error" role="alert">{error}</p>}
-    {loading && <p className="report-loading" role="status">Updating reportâ€¦</p>}
+    {loading && <p className="report-loading" role="status">Updating report…</p>}
     {report && <>
       <section className="report-metrics" aria-label="Support metrics">
         <article><span>Tickets received</span><strong>{report.metrics.received}</strong><small>in the last {range} days</small></article>
@@ -73,7 +73,7 @@ export default function ReportingPage() {
 
         <article className="report-card"><header><div><h2>Priority breakdown</h2><p>Open and pending tickets</p></div></header><div className="report-bars">{report.priorityBreakdown.map((item) => <div className="report-bar-row" key={item.priority}><span>{priorityLabels[item.priority]}</span><i><b className={`bar-${item.priority.toLowerCase()}`} style={{ width: `${(item.count / maxPriority) * 100}%` }}/></i><strong>{item.count}</strong></div>)}</div></article>
 
-        <article className="report-card"><header><div><h2>AI ticket categories</h2><p>{report.categorySampleCount} analyzed tickets in this period</p></div><Link href="/triage">Review triage â†’</Link></header><div className="report-bars">{report.categoryBreakdown.map((item) => <div className="report-bar-row" key={item.category}><span>{categoryLabels[item.category]}</span><i><b className="bar-category" style={{ width: `${(item.count / maxCategory) * 100}%` }}/></i><strong>{item.count}</strong></div>)}</div>{report.categorySampleCount === 0 && <p className="report-hint">Analyze tickets with AI and approve the suggestions to see category trends.</p>}</article>
+        <article className="report-card"><header><div><h2>AI ticket categories</h2><p>{report.categorySampleCount} analyzed tickets in this period</p></div><Link href="/triage">Review triage →</Link></header><div className="report-bars">{report.categoryBreakdown.map((item) => <div className="report-bar-row" key={item.category}><span>{categoryLabels[item.category]}</span><i><b className="bar-category" style={{ width: `${(item.count / maxCategory) * 100}%` }}/></i><strong>{item.count}</strong></div>)}</div>{report.categorySampleCount === 0 && <p className="report-hint">Analyze tickets with AI and approve the suggestions to see category trends.</p>}</article>
       </section>
       <p className="report-footnote">First response uses the earliest agent reply after the first customer message. Category totals include approved AI triage only.</p>
     </>}

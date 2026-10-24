@@ -61,7 +61,7 @@ export default function TriagePage() {
   return <main className="triage-page">
     <header className="triage-header">
       <div>
-        <Link className="drafts-back" href="/">â† Back to inbox</Link>
+        <Link className="drafts-back" href="/">← Back to inbox</Link>
         <p className="drafts-kicker">WORKSPACE / AI REVIEW</p>
         <h1>Ticket triage</h1>
         <p className="drafts-subtitle">Review Gemini’s category, sentiment, and priority suggestions before applying them.</p>
@@ -72,13 +72,13 @@ export default function TriagePage() {
     {error && <p className="drafts-alert error" role="alert">{error}</p>}
     {notice && <p className="drafts-alert success" role="status">{notice}</p>}
 
-    {loading ? <div className="drafts-empty">Loading triage suggestionsâ€¦</div> : items.length === 0 ?
+    {loading ? <div className="drafts-empty">Loading triage suggestions…</div> : items.length === 0 ?
       <div className="drafts-empty"><strong>No tickets waiting for triage review</strong><span>Open a ticket and choose Analyze with AI to create a suggestion.</span><Link href="/">Go to inbox</Link></div> :
       <section className="triage-list" aria-label="Triage suggestions awaiting review">
         {items.map((item) => <article className="triage-card" key={item.id}>
           <header className="triage-card-head">
             <span className="triage-label">AI SUGGESTION</span>
-            <Link href={`/?ticket=${encodeURIComponent(item.ticket.reference)}`}>{item.ticket.reference} â†—</Link>
+            <Link href={`/?ticket=${encodeURIComponent(item.ticket.reference)}`}>{item.ticket.reference} ↗</Link>
           </header>
           <div className="triage-ticket">
             <h2>{item.ticket.subject}</h2>
@@ -95,8 +95,8 @@ export default function TriagePage() {
             <div><strong>Suggested next step</strong><p>{item.recommendation}</p></div>
           </div>
           <footer className="triage-card-foot">
-            <span>{item.model ?? "Gemini"} Â· {formatDate(item.createdAt)}</span>
-            <div><button className="draft-reject" disabled={busyId === item.id} onClick={() => void review(item, "reject")}>{busyId === item.id ? "Savingâ€¦" : "Reject"}</button><button className="draft-approve" disabled={busyId === item.id} onClick={() => void review(item, "approve")}>{busyId === item.id ? "Savingâ€¦" : "Approve & apply priority"}</button></div>
+            <span>{item.model ?? "Gemini"} · {formatDate(item.createdAt)}</span>
+            <div><button className="draft-reject" disabled={busyId === item.id} onClick={() => void review(item, "reject")}>{busyId === item.id ? "Saving…" : "Reject"}</button><button className="draft-approve" disabled={busyId === item.id} onClick={() => void review(item, "approve")}>{busyId === item.id ? "Saving…" : "Approve & apply priority"}</button></div>
           </footer>
         </article>)}
       </section>

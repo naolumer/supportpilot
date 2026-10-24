@@ -22,7 +22,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
 
   const conversation = ticket.messages.slice(-10).map((message) => `${message.role === "CUSTOMER" ? "Customer" : message.role === "INTERNAL" ? "Internal team note" : "Support agent"}: ${message.body}`);
   const input = `TICKET: ${ticket.reference}\nSUBJECT: ${ticket.subject}\nCHANNEL: ${ticket.channel}\nCURRENT PRIORITY: ${ticket.priority}\n\nRECENT CONVERSATION:\n${conversation.join("\n\n")}`;
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
   try {
     const client = new OpenAI({ apiKey, baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/" });

@@ -28,7 +28,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
     ? sources.map((source, index) => `SOURCE ${index + 1}: ${source.title}\n${source.excerpt}`).join("\n\n")
     : "No published knowledge article matched this ticket. Do not invent policy, account details, or actions. Ask a brief clarifying question or say the support team will check.";
   const input = `CUSTOMER: ${ticket.customer.name}\nTICKET SUBJECT: ${ticket.subject}\n\nCONVERSATION:\n${conversation.join("\n\n")}\n\nRETRIEVED PUBLISHED KNOWLEDGE:\n${sourceContext}`;
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
   try {
     const client = new OpenAI({
