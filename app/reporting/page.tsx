@@ -32,7 +32,6 @@ export default function ReportingPage() {
 
   useEffect(() => {
     let current = true;
-    setLoading(true);
     void fetch(`/api/reporting?range=${range}`, { cache: "no-store" })
       .then(async (response) => {
         const result = await response.json() as Report & { error?: string };
@@ -52,7 +51,7 @@ export default function ReportingPage() {
   return <main className="reporting-page">
     <header className="reporting-header">
       <div><Link className="drafts-back" href="/">â† Back to inbox</Link><p className="drafts-kicker">WORKSPACE / REPORTING</p><h1>Support performance</h1><p className="drafts-subtitle">A live view of ticket volume, queue health, and team workload.</p></div>
-      <label className="report-range">Date range<select value={range} onChange={(event) => setRange(Number(event.target.value) as 7 | 30)}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option></select></label>
+      <label className="report-range">Date range<select value={range} onChange={(event) => { setLoading(true); setRange(Number(event.target.value) as 7 | 30); }}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option></select></label>
     </header>
 
     {error && <p className="drafts-alert error" role="alert">{error}</p>}

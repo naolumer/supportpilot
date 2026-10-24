@@ -9,7 +9,7 @@ function articleInput(value: unknown) {
   if (typeof body.summary !== "string" || body.summary.length > 240) return null;
   if (typeof body.content !== "string" || !body.content.trim() || body.content.length > 12000) return null;
   if (body.status !== "DRAFT" && body.status !== "PUBLISHED") return null;
-  return { title: body.title.trim(), summary: body.summary.trim(), content: body.content.trim(), status: body.status };
+  return { title: body.title.trim(), summary: body.summary.trim(), content: body.content.trim(), status: body.status as "DRAFT" | "PUBLISHED" };
 }
 
 function slugify(title: string) {
