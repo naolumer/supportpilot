@@ -1,8 +1,7 @@
-﻿import { initialTickets } from "@/lib/demo-data";
+import { initialTickets } from "@/lib/demo-data";
 import { getPrisma } from "@/lib/prisma";
 import { toInboxTicket } from "@/lib/ticket-serializer";
 
-export const dynamic = "force-dynamic";
 
 const ticketInclude = {
   customer: true,

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useMemo, useState } from "react";
 import { initialTickets, type InboxTicket } from "@/lib/demo-data";
 type Status = InboxTicket["status"];

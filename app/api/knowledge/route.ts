@@ -1,7 +1,6 @@
 import { initialKnowledgeArticles } from "@/lib/knowledge-data";
 import { getPrisma } from "@/lib/prisma";
 
-export const dynamic = "force-dynamic";
 
 function articleInput(value: unknown) {
   if (!value || typeof value !== "object") return null;
