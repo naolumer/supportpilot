@@ -42,4 +42,4 @@ The app uses the sample inbox when `DATABASE_URL` is missing. The seed data is s
 
 ### Enable AI reply drafting
 
-Set `OPENAI_API_KEY` in `.env` using your OpenAI API key. `OPENAI_MODEL` is optional and defaults to `gpt-6-astra`. The draft endpoint retrieves relevant published workspace articles, generates a reply through the OpenAI Responses API, and stores the draft with its article sources for agent review. Drafts are not sent to customers.
+Create a Gemini API key in Google AI Studio, then set `GEMINI_API_KEY` in `.env`. `GEMINI_MODEL` is optional and defaults to `gemini-3.8-flash`. The draft endpoint retrieves relevant published workspace articles, sends the ticket conversation and excerpts to Gemini, and stores the generated draft with its article sources for agent review. Drafts are not sent to customers. The Gemini free tier has model-specific limits; review current [pricing and free-tier details](https://ai.google.dev/gemini-api/docs/pricing). Avoid sending real customer data when using the free tier, as Google may use free-tier content to improve its products.
