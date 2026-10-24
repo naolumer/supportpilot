@@ -4,12 +4,11 @@ AI-assisted customer support workspace for organizing tickets, finding relevant 
 
 ## Current milestone
 
-The app includes a responsive demo inbox with seeded tickets and a searchable knowledge base with draft and published article editing. It supports ticket search, status filters, ticket selection, assignment and status changes, conversation history, and replies or internal notes. Without a database connection, changes stay in browser state and are not saved or sent to customers. With PostgreSQL configured, ticket updates and messages are stored in the database.
+The app includes a responsive demo inbox, a searchable knowledge base, and source-grounded AI reply drafts for agent review. It supports ticket search, status filters, ticket selection, assignment and status changes, conversation history, and replies or internal notes. Without a database connection, changes stay in browser state and are not saved or sent to customers. With PostgreSQL configured, ticket updates and messages are stored in the database.
 
 ## Planned features
 
 - Team workspaces, authentication, and roles
-- Retrieval-augmented reply drafts with visible knowledge sources
 - AI ticket classification and a human approval workflow
 - Basic support team metrics
 
@@ -40,3 +39,7 @@ npm run db:seed
 4. Start or restart the app with `npm run dev`.
 
 The app uses the sample inbox when `DATABASE_URL` is missing. The seed data is synthetic and intended for local development.
+
+### Enable AI reply drafting
+
+Set `OPENAI_API_KEY` in `.env` using your OpenAI API key. `OPENAI_MODEL` is optional and defaults to `gpt-6-astra`. The draft endpoint retrieves relevant published workspace articles, generates a reply through the OpenAI Responses API, and stores the draft with its article sources for agent review. Drafts are not sent to customers.

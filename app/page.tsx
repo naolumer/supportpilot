@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { initialTickets, type InboxTicket } from "@/lib/demo-data";
 type Status = InboxTicket["status"];
 type Ticket = InboxTicket;
+type DraftSource = { articleId: string; slug: string; title: string; excerpt: string; score: number };
 
 function Icon({ children }: { children: string }) { return <span className="icon" aria-hidden="true">{children}</span>; }
 function Avatar({ ticket }: { ticket: Ticket }) { return <span className={`avatar ${ticket.color}`}>{ticket.initials}</span>; }
@@ -19,6 +20,8 @@ export default function Home() {
   const [composerMode, setComposerMode] = useState<"reply" | "note">("reply");
   const [databaseMode, setDatabaseMode] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [drafting, setDrafting] = useState(false);
+  const [draftSources, setDraftSources] = useState<DraftSource[]>([]);
   useEffect(() => {
     let current = true;
     void fetch("/api/tickets", { cache: "no-store" })
@@ -66,6 +69,24 @@ export default function Home() {
       setSaveError(error instanceof Error ? error.message : "Could not save ticket changes.");
     }
   }
+  async function generateDraft() {
+    if (!active || drafting) return;
+    setDrafting(true);
+    setSaveError("");
+    setDraftSources([]);
+    try {
+      const response = await fetch(`/api/tickets/${encodeURIComponent(active.id)}/drafts`, { method: "POST" });
+      const result = await response.json() as { draft?: { id: string; body: string; model: string | null }; sources?: DraftSource[]; error?: string };
+      if (!response.ok || !result.draft) throw new Error(result.error ?? "Could not generate an AI draft.");
+      setNote(result.draft.body);
+      setComposerMode("reply");
+      setDraftSources(result.sources ?? []);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Could not generate an AI draft.");
+    } finally {
+      setDrafting(false);
+    }
+  }
   async function addMessage() {
     const body = note.trim();
     if (!body || !active) return;
@@ -73,6 +94,7 @@ export default function Home() {
     if (!databaseMode) {
       setTickets(rows => rows.map(ticket => ticket.id === active.id ? { ...ticket, messages: [...ticket.messages, { author: "You", role: internal ? "Internal note" : "Agent", time: "Just now", body, internal }] } : ticket));
       setNote("");
+      setDraftSources([]);
       return;
     }
     try {
@@ -83,6 +105,7 @@ export default function Home() {
       if (!response.ok || !result.ticket) throw new Error(result.error ?? "Could not save the message.");
       setTickets(rows => rows.map(ticket => ticket.id === active.id ? result.ticket! : ticket));
       setNote("");
+      setDraftSources([]);
       setSaveError("");
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Could not save the message.");
@@ -124,7 +147,7 @@ export default function Home() {
         <section className="inbox-panel" aria-label="Support inbox">
           <div className="ticket-column"><div className="inbox-heading"><div><h2>Inbox <span>{tickets.length}</span></h2><p>Your team’s conversations</p></div><button className="more" aria-label="More inbox options">···</button></div>
             <div className="list-toolbar"><div className="filters" role="tablist" aria-label="Filter tickets">{(["All", "Open", "Pending", "Resolved"] as const).map(item => <button key={item} role="tab" aria-selected={filter === item} className={filter === item ? "chosen" : ""} onClick={() => setFilter(item)}>{item}<small>{counts[item]}</small></button>)}</div><button className="sort">Newest ⌄</button></div>
-            <div className="ticket-list" role="listbox" aria-label="Tickets">{visible.length ? visible.map(ticket => <button key={ticket.id} className={`ticket-row ${active?.id === ticket.id ? "selected" : ""}`} role="option" aria-selected={active?.id === ticket.id} onClick={() => setSelectedId(ticket.id)}>
+            <div className="ticket-list" role="listbox" aria-label="Tickets">{visible.length ? visible.map(ticket => <button key={ticket.id} className={`ticket-row ${active?.id === ticket.id ? "selected" : ""}`} role="option" aria-selected={active?.id === ticket.id} onClick={() => { setSelectedId(ticket.id); setNote(""); setDraftSources([]); }}>
               <div className="ticket-top"><Avatar ticket={ticket}/><div className="ticket-person"><strong>{ticket.name}</strong><span>{ticket.time}</span></div><span className="channel" title={ticket.channel}>{ticket.channel === "Chat" ? "◌" : ticket.channel === "Web" ? "◫" : "✉"}</span></div>
               <strong className="ticket-subject">{ticket.subject}</strong><p className="ticket-preview">{ticket.preview}</p><div className="ticket-tags"><span className={`priority ${ticket.priority.toLowerCase()}`}><i/>{ticket.priority}</span><span className={`status ${ticket.status.toLowerCase()}`}>{ticket.status}</span>{ticket.assignee !== "Unassigned" && <span className="assignee">{ticket.assignee === "You" ? "NU" : ticket.assignee.split(" ").map(p => p[0]).join("")}</span>}</div>
             </button>) : <div className="empty"><b>No tickets found</b><span>Try a different search or filter.</span></div>}</div>
@@ -136,7 +159,7 @@ export default function Home() {
             <div className="customer"><div><Avatar ticket={active}/><span><strong>{active.name}</strong><small>{active.email}</small></span></div><div><button aria-label="Email customer">✉</button><button aria-label="Customer details">♙</button></div></div>
             <div className="conversation" aria-label="Conversation history">{active.messages.map((message, index) => <div className={`message ${message.internal ? "internal" : ""}`} key={`${active.id}-${index}`}><span className={`message-avatar ${message.author === "You" ? "agent" : active.color}`}>{message.author === "You" ? "NU" : active.initials}</span><div><div className="message-meta"><strong>{message.author}</strong>{message.internal && <b>INTERNAL NOTE</b>}<span>{message.role}</span><time>{message.time}</time></div><p>{message.body}</p></div></div>)}</div>
             <div className="ticket-controls"><label><span>STATUS</span><select value={active.status} onChange={event => update(active.id, {status: event.target.value as Status})}><option>Open</option><option>Pending</option><option>Resolved</option></select></label><label><span>ASSIGNED TO</span><select value={active.assignee} onChange={event => update(active.id, {assignee: event.target.value})}><option>Unassigned</option><option>Ava Patel</option><option>Noah Kim</option><option>You</option></select></label></div>
-            <div className="composer"><div className="composer-tabs"><button className={composerMode === "reply" ? "current" : ""} onClick={() => setComposerMode("reply")}>Reply</button><button className={composerMode === "note" ? "current" : ""} onClick={() => setComposerMode("note")}>Internal note</button><span>Demo workspace · nothing is sent</span></div><textarea aria-label={composerMode === "note" ? "Write an internal note" : "Write a reply"} placeholder={composerMode === "note" ? "Add an internal note for your team…" : "Write a reply (demo only)…"} value={note} onChange={event => setNote(event.target.value)}/><div className="composer-bottom"><small><kbd>⌘</kbd> + <kbd>↵</kbd> to send</small><button disabled={!note.trim()} onClick={addMessage}>{composerMode === "note" ? "Add note" : "Add reply"} <span>↗</span></button></div></div>
+            <div className="composer"><div className="composer-tabs"><button className={composerMode === "reply" ? "current" : ""} onClick={() => setComposerMode("reply")}>Reply</button><button className={composerMode === "note" ? "current" : ""} onClick={() => setComposerMode("note")}>Internal note</button><button className="ai-draft-button" type="button" onClick={generateDraft} disabled={drafting || !active}>{drafting ? "Drafting..." : "Draft with AI"}</button><span>AI drafts need your review</span></div>{draftSources.length > 0 && <div className="draft-sources"><strong>Sources from published articles</strong>{draftSources.map(source => <a key={source.articleId} href="/knowledge"><span>{source.title}</span><small>{source.excerpt}</small></a>)}</div>}<textarea aria-label={composerMode === "note" ? "Write an internal note" : "Write a reply"} placeholder={composerMode === "note" ? "Add an internal note for your team…" : "Write a reply (demo only)…"} value={note} onChange={event => setNote(event.target.value)}/><div className="composer-bottom"><small><kbd>⌘</kbd> + <kbd>↵</kbd> to send</small><button disabled={!note.trim()} onClick={addMessage}>{composerMode === "note" ? "Add note" : "Add reply"} <span>↗</span></button></div></div>
           </article> : <div className="detail-empty">Select a ticket to see its conversation.</div>}
         </section>
         <footer className="footer"><span><i/> All systems operational</span><span>SupportPilot demo workspace <b>·</b> Last synced just now</span></footer>
