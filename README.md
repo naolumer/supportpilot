@@ -4,12 +4,12 @@ AI-assisted customer support workspace for organizing tickets, finding relevant 
 
 ## Current milestone
 
-The app includes a responsive demo inbox, a searchable knowledge base, and source-grounded AI reply drafts for agent review. It supports ticket search, status filters, ticket selection, assignment and status changes, conversation history, and replies or internal notes. Without a database connection, changes stay in browser state and are not saved or sent to customers. With PostgreSQL configured, ticket updates and messages are stored in the database.
+The app includes a responsive demo inbox, a searchable knowledge base, source-grounded AI reply drafts, and an AI drafts review queue. Agents can inspect article evidence and approve or reject drafts; approval records the review but never sends a customer reply. It supports ticket search, status filters, ticket selection, assignment and status changes, conversation history, and replies or internal notes. Without a database connection, inbox changes stay in browser state. With PostgreSQL configured, ticket updates, messages, drafts, and review decisions are stored in the database.
 
 ## Planned features
 
 - Team workspaces, authentication, and roles
-- AI ticket classification and a human approval workflow
+- AI ticket classification with suggested priority and routing
 - Basic support team metrics
 
 Live inbox connections and sending customer replies are outside the initial scope.

@@ -33,7 +33,8 @@ export default function Home() {
       .then((result) => {
         if (!current || !result.tickets) return;
         setTickets(result.tickets);
-        setSelectedId(result.tickets[0]?.id ?? "");
+        const requestedTicket = new URLSearchParams(window.location.search).get("ticket");
+        setSelectedId(result.tickets.find(ticket => ticket.id === requestedTicket)?.id ?? result.tickets[0]?.id ?? "");
         setDatabaseMode(result.mode === "database");
         setSaveError("");
       })
@@ -119,7 +120,7 @@ export default function Home() {
       <p className="nav-label">WORKSPACE</p>
       <nav className="nav-list" aria-label="Workspace navigation">
         <Link className="nav-link active" href="/"><Icon>▤</Icon>Inbox <small>7</small></Link>
-        <button className="nav-link"><Icon>✧</Icon>AI drafts <small>3</small></button>
+        <Link className="nav-link" href="/drafts"><Icon>âœ§</Icon>AI drafts</Link>
         <Link className="nav-link" href="/knowledge"><Icon>▣</Icon>Knowledge base</Link>
         <button className="nav-link"><Icon>▥</Icon>Reporting</button>
       </nav>
