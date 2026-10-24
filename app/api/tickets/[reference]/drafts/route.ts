@@ -44,7 +44,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ re
         },
         { role: "user", content: input },
       ],
-      max_tokens: 240,
+      reasoning_effort: "low",
+      max_tokens: 1200,
     });
     const content = response.choices[0]?.message.content;
     const body = typeof content === "string" ? content.trim() : "";
