@@ -1,7 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+
+type ViewStatus = "All" | "Open" | "Pending" | "Resolved";
+type SavedView = { id: string; name: string; status: ViewStatus; unassignedOnly: boolean };
+const savedViewsKey = "supportpilot:saved-inbox-views";
+
+function readSavedViews(): SavedView[] {
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(savedViewsKey) ?? "[]");
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is SavedView => item && typeof item.id === "string" && typeof item.name === "string" && ["All", "Open", "Pending", "Resolved"].includes(item.status) && typeof item.unassignedOnly === "boolean");
+  } catch {
+    return [];
+  }
+}
 
 const navigation = [
   { href: "/", label: "Inbox", icon: "inbox" },
@@ -26,6 +42,49 @@ function ChevronDown() {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewName, setViewName] = useState("");
+  const [viewStatus, setViewStatus] = useState<ViewStatus>("All");
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
+  const [viewError, setViewError] = useState("");
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSavedViews(readSavedViews()), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!viewDialogOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setViewDialogOpen(false); };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [viewDialogOpen]);
+
+  function saveView(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = viewName.trim();
+    if (!name) { setViewError("Enter a name for this view."); return; }
+    const view = { id: window.crypto.randomUUID(), name, status: viewStatus, unassignedOnly };
+    const next = [...savedViews, view];
+    try { window.localStorage.setItem(savedViewsKey, JSON.stringify(next)); }
+    catch { setViewError("This browser could not save the view. Check its storage settings and try again."); return; }
+    setSavedViews(next);
+    setViewName("");
+    setViewStatus("All");
+    setUnassignedOnly(false);
+    setViewError("");
+    setViewDialogOpen(false);
+    router.push(`/?view=${encodeURIComponent(view.id)}`);
+    window.dispatchEvent(new CustomEvent("supportpilot:select-view", { detail: view.id }));
+  }
+
+  function removeView(id: string) {
+    const next = savedViews.filter(view => view.id !== id);
+    try { window.localStorage.setItem(savedViewsKey, JSON.stringify(next)); }
+    catch { return; }
+    setSavedViews(next);
+  }
 
   return <aside className="sidebar" aria-label="SupportPilot workspace">
     <Link className="brand" href="/" aria-label="SupportPilot home"><span className="brand-mark"><i/><i/><i/><i/></span><span className="brand-name">supportpilot</span><span className="beta">BETA</span></Link>
@@ -39,10 +98,12 @@ export default function Sidebar() {
         </Link>;
       })}
     </nav>
-    <p className="nav-label views-label">YOUR VIEWS <span aria-hidden="true">+</span></p>
-    <div className="view-link"><i className="green-dot"/>My open tickets <small>4</small></div>
-    <div className="view-link"><i className="orange-dot"/>Unassigned <small>2</small></div>
-    <button className="add-view" type="button">+ Add a view</button>
+    <p className="nav-label views-label">YOUR VIEWS <button type="button" aria-label="Create a view" onClick={() => setViewDialogOpen(true)}>+</button></p>
+    <Link className="view-link" href="/?view=my-open" onClick={() => window.dispatchEvent(new CustomEvent("supportpilot:select-view", { detail: "my-open" }))}><i className="green-dot"/>My open tickets</Link>
+    <Link className="view-link" href="/?view=unassigned" onClick={() => window.dispatchEvent(new CustomEvent("supportpilot:select-view", { detail: "unassigned" }))}><i className="orange-dot"/>Unassigned</Link>
+    {savedViews.map(view => <div className="saved-view-row" key={view.id}><Link className="view-link" href={`/?view=${encodeURIComponent(view.id)}`} onClick={() => window.dispatchEvent(new CustomEvent("supportpilot:select-view", { detail: view.id }))}><i className="green-dot"/>{view.name}</Link><button type="button" aria-label={`Delete ${view.name} view`} title="Delete view" onClick={() => removeView(view.id)}>×</button></div>)}
+    <button className="add-view" type="button" onClick={() => setViewDialogOpen(true)}>+ Add a view</button>
+    {viewDialogOpen && <div className="view-dialog-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setViewDialogOpen(false); }}><form className="view-dialog" role="dialog" aria-modal="true" aria-labelledby="view-dialog-title" onSubmit={saveView}><div className="view-dialog-title"><div><p>CUSTOM INBOX FILTER</p><h2 id="view-dialog-title">Create a view</h2></div><button type="button" aria-label="Close dialog" onClick={() => setViewDialogOpen(false)}>×</button></div><label className="view-dialog-field">View name<input autoFocus maxLength={40} value={viewName} onChange={event => { setViewName(event.target.value); setViewError(""); }} placeholder="e.g. Billing follow-ups"/></label><label className="view-dialog-field">Ticket status<select value={viewStatus} onChange={event => setViewStatus(event.target.value as ViewStatus)}><option>All</option><option>Open</option><option>Pending</option><option>Resolved</option></select></label><label className="view-dialog-check"><input type="checkbox" checked={unassignedOnly} onChange={event => setUnassignedOnly(event.target.checked)}/>Only unassigned tickets</label>{viewError && <p className="view-dialog-error" role="alert">{viewError}</p>}<div className="view-dialog-actions"><button type="button" onClick={() => setViewDialogOpen(false)}>Cancel</button><button type="submit">Save view</button></div></form></div>}
     <div className="sidebar-spacer"/>
     <div className="usage-card"><div><strong>AI usage</strong><b>72%</b></div><span className="usage-track"><i/></span><small>72 of 100 AI actions used</small><a href="#plans">See plans <span aria-hidden="true">→</span></a></div>
     <button className="profile" type="button"><span className="profile-avatar">N</span><span><strong>Naol Umer</strong><small>Admin</small></span><span className="profile-more" aria-hidden="true">···</span></button>

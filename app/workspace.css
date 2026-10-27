@@ -24,6 +24,26 @@
 .button-spinner{width:13px;height:13px;border:2px solid #ffffff70;border-top-color:#fff;border-radius:50%;animation:button-spin .7s linear infinite}
 @keyframes button-spin{to{transform:rotate(360deg)}}
 .save-success{line-height:1.5}
+.views-label button{width:22px;height:22px;margin:-6px -4px -6px 0;border:0;border-radius:5px;background:transparent;color:#aab8af;font-size:16px;line-height:1}
+.views-label button:hover,.saved-view-row>button:hover{background:#2a3b31;color:#e9f3ec}
+.view-link{text-decoration:none}
+.saved-view-row{min-height:32px;display:flex;align-items:center}
+.saved-view-row .view-link{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved-view-row>button{width:22px;height:22px;flex:0 0 22px;border:0;border-radius:5px;background:transparent;color:#829087;font-size:16px;line-height:1}
+.view-dialog-backdrop{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:#101b15a8}
+.view-dialog{width:min(100%,390px);padding:20px;border:1px solid #e2e9e3;border-radius:12px;background:#fff;box-shadow:0 20px 65px #0c1a123d;color:#334138}
+.view-dialog-title{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:19px}
+.view-dialog-title p{margin:0;color:#718176;font-size:9px;font-weight:700;letter-spacing:1px}
+.view-dialog-title h2{margin:5px 0 0;color:#28372d;font-size:20px;letter-spacing:-.4px}
+.view-dialog-title>button{width:28px;height:28px;border:1px solid #e5ebe6;border-radius:6px;background:#fff;color:#657267;font-size:19px;line-height:1}
+.view-dialog-field{margin-top:13px;display:grid;gap:6px;color:#536257;font-size:11px;font-weight:600}
+.view-dialog-field input,.view-dialog-field select{height:36px;padding:0 10px;border:1px solid #dfe7e0;border-radius:6px;background:white;color:#35453a;font-size:12px}
+.view-dialog-check{margin-top:15px;display:flex;align-items:center;gap:8px;color:#56665a;font-size:11px}
+.view-dialog-check input{width:15px;height:15px;accent-color:#438158}
+.view-dialog-error{margin:9px 0 0;color:#a34e42;font-size:11px}
+.view-dialog-actions{margin-top:21px;display:flex;justify-content:flex-end;gap:8px}
+.view-dialog-actions button{height:34px;padding:0 12px;border:1px solid #e0e7e1;border-radius:6px;background:#fff;color:#526157;font-size:11px;font-weight:600}
+.view-dialog-actions button[type="submit"]{border-color:#2f7048;background:#2f7048;color:#fff}
 .ticket-ai-label,.ticket-sentiment{padding:3px 6px;border:1px solid #e3ebe4;border-radius:5px;background:#f5f8f5;color:#526c58;font-size:9px;font-weight:600;line-height:1.2;text-transform:capitalize}
 .ticket-sentiment.negative,.ticket-sentiment.frustrated{border-color:#f0ddd7;background:#fcf2ef;color:#9c594b}
 .ticket-sentiment.positive{border-color:#dcebe0;background:#f0f7f1;color:#4e7958}
@@ -37,7 +57,7 @@
   .workspace-layout>.sidebar{width:72px;padding-right:9px;padding-left:9px}
   .workspace-content{width:calc(100% - 72px);margin-left:72px}
   .brand{justify-content:center;padding:0}
-  .brand-name,.beta,.workspace>span,.workspace>svg,.nav-label,.nav-link-label,.nav-link small,.view-link,.add-view,.usage-card,.profile>span:not(.profile-avatar),.profile-more{display:none}
+  .brand-name,.beta,.workspace>span,.workspace>svg,.nav-label,.nav-link-label,.nav-link small,.view-link,.saved-view-row,.add-view,.usage-card,.profile>span:not(.profile-avatar),.profile-more{display:none}
   .workspace{justify-content:center;padding:7px 0}
   .nav-list{gap:5px;margin-top:26px}
   .nav-link,.sidebar .nav-link:not(.active){min-height:42px;display:flex;justify-content:center;padding:0}

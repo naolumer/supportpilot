@@ -7,9 +7,22 @@ import { initialTickets, type InboxTicket } from "@/lib/demo-data";
 import { readApiResponse } from "@/lib/read-api-response";
 type Status = InboxTicket["status"];
 type Ticket = InboxTicket;
+type ViewStatus = "All" | Status;
+type SavedInboxView = { id: string; name: string; status: ViewStatus; unassignedOnly: boolean };
 type DraftSource = { articleId: string; slug: string; title: string; excerpt: string; score: number };
 type DashboardReport = { metrics: { received: number; open: number; pending: number; waitingForReply: number; unassigned: number; resolved: number; averageFirstResponseMinutes: number | null; responseSamples: number } };
 const ticketCategoryLabels: Record<string, string> = { BILLING: "Billing", ACCOUNT_ACCESS: "Account access", TECHNICAL_ISSUE: "Technical", FEATURE_REQUEST: "Feature", HOW_TO: "How-to", OTHER: "Other" };
+const savedViewsKey = "supportpilot:saved-inbox-views";
+
+function readSavedInboxViews(): SavedInboxView[] {
+  try {
+    const value: unknown = JSON.parse(window.localStorage.getItem(savedViewsKey) ?? "[]");
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is SavedInboxView => item && typeof item.id === "string" && typeof item.name === "string" && ["All", "Open", "Pending", "Resolved"].includes(item.status) && typeof item.unassignedOnly === "boolean");
+  } catch {
+    return [];
+  }
+}
 
 function formatResponseTime(minutes: number | null) {
   if (minutes === null) return "—";
@@ -24,6 +37,8 @@ export default function Home() {
   const [tickets, setTickets] = useState(initialTickets);
   const [selectedId, setSelectedId] = useState(initialTickets[0].id);
   const [filter, setFilter] = useState<"All" | Status>("All");
+  const [activeViewId, setActiveViewId] = useState("");
+  const [savedViews, setSavedViews] = useState<SavedInboxView[]>([]);
   const [query, setQuery] = useState("");
   const [note, setNote] = useState("");
   const [composerMode, setComposerMode] = useState<"reply" | "note">("reply");
@@ -42,6 +57,26 @@ export default function Home() {
   const [triageNotice, setTriageNotice] = useState("");
   const [draftSources, setDraftSources] = useState<DraftSource[]>([]);
   const selectedIdRef = useRef(initialTickets[0].id);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSavedViews(readSavedInboxViews()), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    const selectView = (event: Event) => {
+      const viewId = (event as CustomEvent<string>).detail;
+      setActiveViewId(viewId);
+      setFilter("All");
+      setQuery("");
+      setSelectedId("");
+    };
+    const restoreView = () => setActiveViewId(new URLSearchParams(window.location.search).get("view") ?? "");
+    window.addEventListener("supportpilot:select-view", selectView);
+    window.addEventListener("popstate", restoreView);
+    return () => {
+      window.removeEventListener("supportpilot:select-view", selectView);
+      window.removeEventListener("popstate", restoreView);
+    };
+  }, []);
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setTodayLabel(new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()).toUpperCase());
@@ -72,10 +107,12 @@ export default function Home() {
         if (!current || !result.tickets) return;
         setTickets(result.tickets);
         const requestedTicket = new URLSearchParams(window.location.search).get("ticket");
+        const requestedView = new URLSearchParams(window.location.search).get("view") ?? "";
         const approvedDraftId = new URLSearchParams(window.location.search).get("approvedDraft");
         const nextSelectedId = result.tickets.find(ticket => ticket.id === requestedTicket)?.id ?? result.tickets[0]?.id ?? "";
         selectedIdRef.current = nextSelectedId;
         setSelectedId(nextSelectedId);
+        setActiveViewId(requestedView);
         setDatabaseMode(result.mode === "database");
         setSaveError("");
         if (approvedDraftId) {
@@ -110,9 +147,17 @@ export default function Home() {
   const visible = useMemo(() => tickets.filter((ticket) => {
     const term = query.trim().toLowerCase();
     const matchesQuery = `${ticket.id} ${ticket.name} ${ticket.subject} ${ticket.preview}`.toLowerCase().includes(term);
-    return matchesQuery && (filter === "All" || ticket.status === filter);
-  }), [tickets, filter, query]);
+    const savedView = savedViews.find(view => view.id === activeViewId);
+    const matchesBuiltInView = activeViewId === "my-open"
+      ? ticket.status === "Open" && ticket.assignee === "You"
+      : activeViewId === "unassigned"
+        ? ticket.status !== "Resolved" && ticket.assignee === "Unassigned"
+        : true;
+    const matchesSavedView = !savedView || ((savedView.status === "All" || ticket.status === savedView.status) && (!savedView.unassignedOnly || ticket.assignee === "Unassigned"));
+    return matchesQuery && (filter === "All" || ticket.status === filter) && matchesBuiltInView && matchesSavedView;
+  }), [tickets, filter, query, activeViewId, savedViews]);
   const active = visible.find((ticket) => ticket.id === selectedId) ?? visible[0] ?? null;
+  const activeView = activeViewId === "my-open" ? "My open tickets" : activeViewId === "unassigned" ? "Unassigned" : savedViews.find(view => view.id === activeViewId)?.name;
   useEffect(() => { selectedIdRef.current = active?.id ?? ""; }, [active?.id]);
   const counts = { All: tickets.length, Open: tickets.filter(t => t.status === "Open").length, Pending: tickets.filter(t => t.status === "Pending").length, Resolved: tickets.filter(t => t.status === "Resolved").length };
   async function update(id: string, patch: Partial<Ticket>) {
@@ -258,7 +303,7 @@ export default function Home() {
         {dashboardError && <p className="save-error" role="status">{dashboardError}</p>}
 
         <section className="inbox-panel" aria-label="Support inbox">
-          <div className="ticket-column"><div className="inbox-heading"><div><h2>Inbox <span>{tickets.length}</span></h2><p>Your team’s conversations</p></div><button className="more" aria-label="More inbox options">···</button></div>
+          <div className="ticket-column"><div className="inbox-heading"><div><h2>{activeView ?? "Inbox"} <span>{visible.length}</span></h2><p>{activeView ? "Tickets matching this view" : "Your team’s conversations"}</p></div><button className="more" aria-label="More inbox options">···</button></div>
             <div className="list-toolbar"><div className="filters" role="tablist" aria-label="Filter tickets">{(["All", "Open", "Pending", "Resolved"] as const).map(item => <button key={item} role="tab" aria-selected={filter === item} className={filter === item ? "chosen" : ""} onClick={() => setFilter(item)}>{item}<small>{counts[item]}</small></button>)}</div><button className="sort">Newest<svg className="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
             <div className="ticket-list" role="listbox" aria-label="Tickets">{visible.length ? visible.map(ticket => <button key={ticket.id} className={`ticket-row ${active?.id === ticket.id ? "selected" : ""}`} role="option" aria-selected={active?.id === ticket.id} onClick={() => { selectedIdRef.current = ticket.id; setSelectedId(ticket.id); setNote(""); setDraftSources([]); setDraftDetected(false); setDraftNotice(""); setMessageNotice(""); }}>
               <div className="ticket-top"><Avatar ticket={ticket}/><div className="ticket-person"><strong>{ticket.name}</strong><span>{ticket.time}</span></div><span className="channel" title={ticket.channel}>{ticket.channel === "Chat" ? "◌" : ticket.channel === "Web" ? "◫" : "✉"}</span></div>
