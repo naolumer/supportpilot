@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { initialKnowledgeArticles, type KnowledgeArticle } from "@/lib/knowledge-data";
 import { readApiResponse } from "@/lib/read-api-response";
@@ -128,24 +127,6 @@ export default function KnowledgePage() {
   }
 
   return <main className="app-shell">
-    <aside className="sidebar">
-      <Link className="brand" href="/"><span className="brand-mark"><i/><i/><i/><i/></span>supportpilot<span className="beta">BETA</span></Link>
-      <button className="workspace"><b>N</b><span><strong>Northstar Studio</strong><small>Free workspace</small></span><span className="chevron">⌄</span></button>
-      <p className="nav-label">WORKSPACE</p>
-      <nav className="nav-list" aria-label="Workspace navigation">
-        <Link className="nav-link" href="/"><span className="icon" aria-hidden="true">▤</span>Inbox</Link>
-        <button className="nav-link"><span className="icon" aria-hidden="true">✧</span>AI drafts <small>3</small></button>
-        <Link className="nav-link active" href="/knowledge"><span className="icon" aria-hidden="true">▣</span>Knowledge base</Link>
-        <button className="nav-link"><span className="icon" aria-hidden="true">▥</span>Reporting</button>
-      </nav>
-      <p className="nav-label views-label">YOUR VIEWS</p>
-      <div className="view-link"><i className="green-dot"/>My open tickets <small>4</small></div>
-      <div className="view-link"><i className="orange-dot"/>Unassigned <small>2</small></div>
-      <div className="sidebar-spacer"/>
-      <div className="usage-card"><div><strong>AI usage</strong><b>72%</b></div><span className="usage-track"><i/></span><small>72 of 100 AI actions used</small><a href="#plans">See plans →</a></div>
-      <button className="profile"><span className="profile-avatar">N</span><span><strong>Naol Umer</strong><small>Admin</small></span><span className="profile-more">···</span></button>
-    </aside>
-
     <section className="main-area">
       <header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>Knowledge base</strong></div><div className="top-actions"><label className="search"><span className="icon" aria-hidden="true">⌕</span><input aria-label="Search knowledge articles" placeholder="Search knowledge..." value={query} onChange={(event) => setQuery(event.target.value)}/><kbd>⌘ K</kbd></label><button className="top-icon" aria-label="Notifications">♧<i/></button><button className="help">?</button></div></header>
       <div className="content knowledge-content">
