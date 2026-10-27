@@ -13,8 +13,8 @@ export const GET = withApiErrors(async (request: Request) => {
   const url = new URL(request.url);
   const days = url.searchParams.get("range") === "30" ? 30 : 7;
   const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  start.setDate(start.getDate() - days + 1);
+  start.setUTCHours(0, 0, 0, 0);
+  start.setUTCDate(start.getUTCDate() - days + 1);
   const startKey = start.toISOString().slice(0, 10);
 
   const [tickets, resolutions] = await Promise.all([
@@ -41,7 +41,10 @@ export const GET = withApiErrors(async (request: Request) => {
   const created = tickets.filter((ticket) => ticket.createdAt >= start);
   const open = tickets.filter((ticket) => ticket.status === "OPEN");
   const pending = tickets.filter((ticket) => ticket.status === "PENDING");
-  const waitingForReply = open.length;
+  const waitingForReply = open.filter((ticket) => {
+    const latestPublicMessage = [...ticket.messages].reverse().find((message) => message.role !== "INTERNAL");
+    return latestPublicMessage?.role === "CUSTOMER";
+  }).length;
   const unassigned = tickets.filter((ticket) => ticket.status !== "RESOLVED" && !ticket.assignee).length;
 
   const responseTimes: number[] = [];
@@ -54,9 +57,9 @@ export const GET = withApiErrors(async (request: Request) => {
 
   const daysList = Array.from({ length: days }, (_, index) => {
     const date = new Date(start);
-    date.setDate(start.getDate() + index);
+    date.setUTCDate(start.getUTCDate() + index);
     const key = date.toISOString().slice(0, 10);
-    return { key, label: new Intl.DateTimeFormat("en", { ...(days === 7 ? { weekday: "short" as const } : {}), month: "short", day: "numeric" }).format(date), count: 0 };
+    return { key, label: new Intl.DateTimeFormat("en", { timeZone: "UTC", ...(days === 7 ? { weekday: "short" as const } : {}), month: "short", day: "numeric" }).format(date), count: 0 };
   });
   const dayCounts = new Map(daysList.map((day) => [day.key, day]));
   for (const ticket of created) {

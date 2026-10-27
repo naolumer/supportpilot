@@ -67,7 +67,7 @@ export default function ReportingPage() {
 
       <section className="report-grid">
         <article className="report-card report-volume"><header><div><h2>Ticket volume</h2><p>New tickets by day</p></div><span>{range} days</span></header><div className={`volume-chart ${range === 30 ? "monthly" : "weekly"}`} role="img" aria-label={`Daily ticket volume for the last ${range} days`}>
-          {report.volume.map((day) => <div className="volume-day" key={day.key} title={`${day.label}: ${day.count} tickets`}><span className="volume-bar-track"><i style={{ height: `${day.count ? Math.max(9, (day.count / maxVolume) * 100) : 2}%` }}/></span><small>{range === 7 || new Date(day.key).getDate() === 1 ? day.label : ""}</small></div>)}
+          {report.volume.map((day) => <div className="volume-day" key={day.key} title={`${day.label}: ${day.count} tickets`}><span className="volume-bar-track"><i style={{ height: `${day.count ? Math.max(9, (day.count / maxVolume) * 100) : 2}%` }}/></span><small>{range === 7 || day.key.slice(8, 10) === "01" ? day.label : ""}</small></div>)}
         </div></article>
 
         <article className="report-card"><header><div><h2>Current queue</h2><p>Tickets requiring follow-up</p></div></header><div className="report-stat-list"><div><span>Open</span><strong>{report.metrics.open}</strong></div><div><span>Pending</span><strong>{report.metrics.pending}</strong></div><div><span>Unassigned</span><strong>{report.metrics.unassigned}</strong></div></div><div className="report-breakdown">{report.assigneeBreakdown.map((person) => <div key={person.name}><span>{person.name}</span><b>{person.count}</b></div>)}</div></article>
