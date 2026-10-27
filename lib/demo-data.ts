@@ -9,6 +9,8 @@ export type InboxTicket = {
   time: string;
   status: "Open" | "Pending" | "Resolved";
   priority: "Urgent" | "High" | "Normal" | "Low";
+  category?: string | null;
+  sentiment?: string | null;
   channel: "Email" | "Chat" | "Web";
   assignee: string;
   messages: { author: string; role: string; time: string; body: string; internal?: boolean }[];

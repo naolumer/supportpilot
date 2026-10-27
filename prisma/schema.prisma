@@ -124,6 +124,8 @@ model Ticket {
   preview     String
   status      TicketStatus    @default(OPEN)
   priority    TicketPriority  @default(NORMAL)
+  category    TicketCategory?
+  sentiment   TicketSentiment?
   channel     TicketChannel   @default(EMAIL)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt

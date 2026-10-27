@@ -23,6 +23,9 @@
 .button-spinner{width:13px;height:13px;border:2px solid #ffffff70;border-top-color:#fff;border-radius:50%;animation:button-spin .7s linear infinite}
 @keyframes button-spin{to{transform:rotate(360deg)}}
 .save-success{line-height:1.5}
+.ticket-ai-label,.ticket-sentiment{padding:3px 6px;border:1px solid #e3ebe4;border-radius:5px;background:#f5f8f5;color:#526c58;font-size:9px;font-weight:600;line-height:1.2;text-transform:capitalize}
+.ticket-sentiment.negative,.ticket-sentiment.frustrated{border-color:#f0ddd7;background:#fcf2ef;color:#9c594b}
+.ticket-sentiment.positive{border-color:#dcebe0;background:#f0f7f1;color:#4e7958}
 
 @media(max-width:1120px){
   .workspace-layout>.sidebar{width:220px}

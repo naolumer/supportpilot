@@ -17,8 +17,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const triage = await prisma.aiTriage.findFirst({
     where: { id, ticket: { is: { workspaceId: workspace.id } } },
     select: {
-      id: true, status: true, ticketId: true, suggestedPriority: true,
-      ticket: { select: { reference: true, priority: true } },
+      id: true, status: true, ticketId: true, category: true, sentiment: true, suggestedPriority: true,
+      ticket: { select: { reference: true, priority: true, category: true, sentiment: true } },
     },
   });
   if (!triage) return Response.json({ error: "Triage suggestion not found." }, { status: 404 });
@@ -36,15 +36,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (changed.count === 0) return null;
 
     if (body.decision === "approve") {
-      await tx.ticket.update({ where: { id: triage.ticketId }, data: { priority: triage.suggestedPriority } });
+      await tx.ticket.update({
+        where: { id: triage.ticketId },
+        data: { priority: triage.suggestedPriority, category: triage.category, sentiment: triage.sentiment },
+      });
+      const changes = [];
       if (triage.ticket.priority !== triage.suggestedPriority) {
-        await tx.auditEvent.create({
-          data: {
-            ticketId: triage.ticketId, actorName: reviewer.name, action: "AI_PRIORITY_APPLIED",
-            fromValue: triage.ticket.priority, toValue: triage.suggestedPriority,
-          },
-        });
+        changes.push({ ticketId: triage.ticketId, actorName: reviewer.name, action: "AI_PRIORITY_APPLIED", fromValue: triage.ticket.priority, toValue: triage.suggestedPriority });
       }
+      if (triage.ticket.category !== triage.category) {
+        changes.push({ ticketId: triage.ticketId, actorName: reviewer.name, action: "AI_CATEGORY_APPLIED", fromValue: triage.ticket.category, toValue: triage.category });
+      }
+      if (triage.ticket.sentiment !== triage.sentiment) {
+        changes.push({ ticketId: triage.ticketId, actorName: reviewer.name, action: "AI_SENTIMENT_APPLIED", fromValue: triage.ticket.sentiment, toValue: triage.sentiment });
+      }
+      if (changes.length) await tx.auditEvent.createMany({ data: changes });
     }
     await tx.auditEvent.create({
       data: {
@@ -56,5 +62,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return true;
   });
   if (!result) return Response.json({ error: "This suggestion was reviewed in another session." }, { status: 409 });
-  return Response.json({ id, status, priority: body.decision === "approve" ? triage.suggestedPriority : triage.ticket.priority, ticketReference: triage.ticket.reference });
+  return Response.json({
+    id,
+    status,
+    ticketReference: triage.ticket.reference,
+    priority: body.decision === "approve" ? triage.suggestedPriority : triage.ticket.priority,
+    category: body.decision === "approve" ? triage.category : triage.ticket.category,
+    sentiment: body.decision === "approve" ? triage.sentiment : triage.ticket.sentiment,
+  });
 }

@@ -10,6 +10,8 @@ type TicketRecord = {
   preview: string;
   status: string;
   priority: string;
+  category: string | null;
+  sentiment: string | null;
   channel: string;
   createdAt: Date;
   updatedAt: Date;
@@ -51,6 +53,8 @@ export function toInboxTicket(ticket: TicketRecord): InboxTicket {
     time: relativeTime(ticket.updatedAt),
     status: statusLabel[ticket.status],
     priority: priorityLabel[ticket.priority],
+    category: ticket.category,
+    sentiment: ticket.sentiment,
     channel: ticket.channel === "EMAIL" ? "Email" : ticket.channel === "CHAT" ? "Chat" : "Web",
     assignee: ticket.assignee?.name === "Naol Umer" ? "You" : ticket.assignee?.name ?? "Unassigned",
     messages: ticket.messages.map((message) => ({

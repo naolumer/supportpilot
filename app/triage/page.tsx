@@ -52,7 +52,7 @@ export default function TriagePage() {
       if (!response.ok) throw new Error(result.error ?? "Could not review this triage suggestion.");
       setItems((rows) => rows.filter((row) => row.id !== item.id));
       setNotice(decision === "approve"
-        ? `${item.ticket.reference} updated to ${item.suggestedPriority.toLowerCase()} priority. The review was recorded.`
+        ? `${item.ticket.reference} updated with ${labels[item.category] ?? labels.OTHER}, ${item.sentiment.toLowerCase()} sentiment, and ${item.suggestedPriority.toLowerCase()} priority.`
         : `Triage suggestion for ${item.ticket.reference} rejected. The ticket was not changed.`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not review this triage suggestion.");
