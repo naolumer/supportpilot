@@ -8,7 +8,14 @@ import { readApiResponse } from "@/lib/read-api-response";
 type Status = InboxTicket["status"];
 type Ticket = InboxTicket;
 type DraftSource = { articleId: string; slug: string; title: string; excerpt: string; score: number };
+type DashboardReport = { metrics: { received: number; open: number; pending: number; waitingForReply: number; unassigned: number; resolved: number; averageFirstResponseMinutes: number | null; responseSamples: number } };
 const ticketCategoryLabels: Record<string, string> = { BILLING: "Billing", ACCOUNT_ACCESS: "Account access", TECHNICAL_ISSUE: "Technical", FEATURE_REQUEST: "Feature", HOW_TO: "How-to", OTHER: "Other" };
+
+function formatResponseTime(minutes: number | null) {
+  if (minutes === null) return "—";
+  if (minutes < 60) return `${Math.round(minutes)} min`;
+  return `${(minutes / 60).toFixed(1)} hrs`;
+}
 
 function Icon({ children }: { children: string }) { return <span className="icon" aria-hidden="true">{children}</span>; }
 function Avatar({ ticket }: { ticket: Ticket }) { return <span className={`avatar ${ticket.color}`}>{ticket.initials}</span>; }
@@ -21,6 +28,10 @@ export default function Home() {
   const [note, setNote] = useState("");
   const [composerMode, setComposerMode] = useState<"reply" | "note">("reply");
   const [databaseMode, setDatabaseMode] = useState(false);
+  const [dashboardRange, setDashboardRange] = useState<"7" | "30">("7");
+  const [dashboardReport, setDashboardReport] = useState<DashboardReport | null>(null);
+  const [dashboardError, setDashboardError] = useState("");
+  const [todayLabel, setTodayLabel] = useState("");
   const [saveError, setSaveError] = useState("");
   const [drafting, setDrafting] = useState(false);
   const [draftDetected, setDraftDetected] = useState(false);
@@ -31,6 +42,24 @@ export default function Home() {
   const [triageNotice, setTriageNotice] = useState("");
   const [draftSources, setDraftSources] = useState<DraftSource[]>([]);
   const selectedIdRef = useRef(initialTickets[0].id);
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setTodayLabel(new Intl.DateTimeFormat("en", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(new Date()).toUpperCase());
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    let current = true;
+    void fetch(`/api/reporting?range=${dashboardRange}`, { cache: "no-store" })
+      .then(async (response) => {
+        const result = await readApiResponse<DashboardReport & { error?: string }>(response);
+        if (!response.ok) throw new Error(result.error ?? "Could not load inbox metrics.");
+        return result;
+      })
+      .then((result) => { if (current) { setDashboardReport(result); setDashboardError(""); } })
+      .catch((error: unknown) => { if (current) setDashboardError(error instanceof Error ? error.message : "Could not load inbox metrics."); });
+    return () => { current = false; };
+  }, [dashboardRange]);
   useEffect(() => {
     let current = true;
     void fetch("/api/tickets", { cache: "no-store" })
@@ -218,14 +247,15 @@ export default function Home() {
     <section className="main-area" id="inbox">
       <header className="topbar"><div className="crumb">Workspace <span>/</span> <strong>Inbox</strong></div><div className="top-actions"><label className="search"><Icon>⌕</Icon><input aria-label="Search tickets" placeholder="Search tickets..." value={query} onChange={event => setQuery(event.target.value)}/><kbd>⌘ K</kbd></label><button className="top-icon" aria-label="Notifications">♧<i/></button><button className="help">?</button></div></header>
       <div className="content">
-        <div className="page-heading"><div><div className="eyebrow"><i/> FRIDAY, OCTOBER 23, 2026</div><h1>Good morning, Naol <span>✳</span></h1><p>Here’s what’s happening with your support inbox today.</p></div><button className="date-button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Last 7 days</span><svg className="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></button></div>
+        <div className="page-heading"><div><div className="eyebrow"><i/> {todayLabel || "SUPPORT INBOX OVERVIEW"}</div><h1>Good morning, Naol <span>✳</span></h1><p>Here’s what’s happening in your support inbox today.</p></div><label className="date-button"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><select aria-label="Reporting date range" value={dashboardRange} onChange={event => { setDashboardRange(event.target.value as "7" | "30"); setDashboardReport(null); }}><option value="7">Last 7 days</option><option value="30">Last 30 days</option></select><svg className="dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg></label></div>
         {saveError && <p className="save-error" role="alert">{saveError}</p>}{messageNotice && <p className="save-success" role="status">{messageNotice}</p>}{draftNotice && <p className="save-success" role="status">{draftNotice}<Link href="/drafts">Review drafts</Link></p>}{triageNotice && <p className="save-success" role="status">{triageNotice}<Link href="/triage">Review suggestion</Link></p>}
-        <section className="metrics" aria-label="Inbox overview">
-          <article className="metric"><div><span>Open tickets</span><b className="metric-icon green">▤</b></div><strong>{counts.Open + counts.Pending}<small className="good">↓ 12%</small></strong><p>vs. previous 7 days</p><div className="sparkline"><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
-          <article className="metric"><div><span>Needs a reply</span><b className="metric-icon purple">◌</b></div><strong>{counts.Open}<small>in your queue</small></strong><p>2 tickets are unassigned</p><div className="progress"><i style={{width:"55%"}}/></div></article>
-          <article className="metric"><div><span>Avg. first response</span><b className="metric-icon amber">◷</b></div><strong>2.4<small className="unit">hrs</small><small className="good">↓ 18%</small></strong><p>You’re faster than last week</p><div className="progress"><i style={{width:"72%"}}/></div></article>
-          <article className="metric"><div><span>Resolved this week</span><b className="metric-icon green">✓</b></div><strong>38<small className="good">↑ 8%</small></strong><p>Great work, team <b className="star">✦</b></p><div className="sparkline pale"><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
+        <section className="metrics" aria-label="Inbox overview" aria-busy={!dashboardReport && !dashboardError}>
+          <article className="metric"><div><span>Open tickets</span><b className="metric-icon green">▤</b></div><strong>{dashboardReport ? dashboardReport.metrics.open + dashboardReport.metrics.pending : "—"}</strong><p>{dashboardReport ? `${dashboardReport.metrics.received} received in this period` : dashboardError ? "Metrics unavailable" : "Loading report…"}</p></article>
+          <article className="metric"><div><span>Needs a reply</span><b className="metric-icon purple">◌</b></div><strong>{dashboardReport?.metrics.waitingForReply ?? "—"}<small>open tickets</small></strong><p>{dashboardReport ? `${dashboardReport.metrics.unassigned} unassigned` : dashboardError ? "Metrics unavailable" : "Loading report…"}</p></article>
+          <article className="metric"><div><span>Avg. first response</span><b className="metric-icon amber">◷</b></div><strong>{dashboardReport ? formatResponseTime(dashboardReport.metrics.averageFirstResponseMinutes) : "—"}</strong><p>{dashboardReport ? dashboardReport.metrics.responseSamples ? `Based on ${dashboardReport.metrics.responseSamples} replied tickets` : "No first replies in this period" : dashboardError ? "Metrics unavailable" : "Loading report…"}</p></article>
+          <article className="metric"><div><span>Resolved in {dashboardRange === "7" ? "7 days" : "30 days"}</span><b className="metric-icon green">✓</b></div><strong>{dashboardReport?.metrics.resolved ?? "—"}</strong><p>{dashboardReport ? "Tickets resolved in this period" : dashboardError ? "Metrics unavailable" : "Loading report…"}</p></article>
         </section>
+        {dashboardError && <p className="save-error" role="status">{dashboardError}</p>}
 
         <section className="inbox-panel" aria-label="Support inbox">
           <div className="ticket-column"><div className="inbox-heading"><div><h2>Inbox <span>{tickets.length}</span></h2><p>Your team’s conversations</p></div><button className="more" aria-label="More inbox options">···</button></div>

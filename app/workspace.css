@@ -12,6 +12,7 @@
 .nav-link-label{min-width:0}
 .date-button,.sort{display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .date-button svg,.sort svg{flex:0 0 auto}
+.date-button select{appearance:none;padding:0;border:0;outline:0;background:transparent;color:inherit;font:inherit;cursor:pointer}
 .dropdown-chevron{color:#718075}
 .sort{white-space:nowrap}
 .ticket-controls label{position:relative;padding-right:13px}
